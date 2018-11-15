@@ -1,4 +1,4 @@
-# kubergrant - Kubernetes cluster in Vagrant
+# kubergrant - Kubernetes cluster over Vagrant VMs
 
 ## Prerequisites
 
@@ -7,9 +7,11 @@
 You have to create a file named 'variables.sh' in the repository root folder.
 You have to set 3 parameters with your own data.
 
+```bash
 KUBERNETES_USER_PUBLIC_KEY=""
 KUBERNETES_USER_USERNAME=""
 KUBERNETES_USER_GROUP=""
+```
 
 The file will look like this in the end:
 
@@ -72,8 +74,10 @@ Wait until the provisioning finishes and copy the admin cluster token and sha su
 
 Update your variables.sh file on these 2 parameters - they will be used to provision the nodes.
 
+```bash
 KUBERNETES_CLUSTER_TOKEN=""
 KUBERNETES_CLUSTER_TOKEN_SHA=""
+```
 
 Provision the rest of the Vagrant nodes
 
@@ -96,14 +100,19 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 # kubectl delete pod -n kube-system -l app=flannel
 ```
 
-2 To install the Dashboard, ssh to the master and
+2 To install the Dashboard
 
 ```bash
+# SSh to your cluster master machine
+ssh <user>@127.0.0.1 -p <vagrant_port>
+
+# Run these commands
 sudo su
 chmod +x /tmp/others_kubernetes_deploy_dashboard.sh
 /tmp/others_kubernetes_deploy_dashboard.sh
 
-## You have to do 3 manual steps:
+## You also have to do 3 manual steps:
+
 # on your local machine, run command ssh -L 8001:localhost:8001 <your_user>@127.0.0.1 -p <vagrant_assigned_port>
 # navigate with browser to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
 # choose Token authentication and insert token from above commands
