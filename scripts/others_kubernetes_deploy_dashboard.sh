@@ -1,8 +1,17 @@
 #!/bin/bash
 
-# Deploy Dashboard - reference: https://github.com/kubernetes/dashboard/wiki/Creating-sample-user
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
-kubectl get pod -n kube-system | grep dashboard
+# # METHOD 1
+# # Deploy Dashboard - reference: https://github.com/kubernetes/dashboard/wiki/Creating-sample-user
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+# kubectl get pod -n kube-system | grep dashboard
+
+## METHOD 2
+kubectl apply -f /tmp/kubernetes-dashboard.yml
+kubectl -n kube-system get service kubernetes-dashboard
+
+# Manual
+# kubectl -n kube-system edit service kubernetes-dashboard
+# kubectl -n kube-system get service kubernetes-dashboard
 
 # Create user for Dashboard admin access
 kubectl apply -f /tmp/dashboard-adminuser.yml
@@ -10,7 +19,9 @@ kubectl apply -f /tmp/dashboard-adminuser-rbac.yml
 
 # Print access token for said user
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
-nohup kubectl proxy >/dev/null 2>&1 &
+
+## Only for METHOD 1
+# nohup kubectl proxy >/dev/null 2>&1 &
 
 # NOT WORKING:
 # echo -e "kubectl proxy" > /tmp/kubectl_proxy.sh
