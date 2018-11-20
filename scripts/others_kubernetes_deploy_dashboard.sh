@@ -1,11 +1,6 @@
 #!/bin/bash
 
-# # METHOD 1
-# # Deploy Dashboard - reference: https://github.com/kubernetes/dashboard/wiki/Creating-sample-user
-# kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
-# kubectl get pod -n kube-system | grep dashboard
-
-## METHOD 2
+## METHOD 1
 kubectl apply -f /tmp/kubernetes-dashboard.yml
 kubectl -n kube-system get service kubernetes-dashboard
 
@@ -20,7 +15,16 @@ kubectl apply -f /tmp/dashboard-adminuser-rbac.yml
 # Print access token for said user
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 
-## Only for METHOD 1
+# Access below URL with Mozilla and paste in the token (will not work with Chrome)
+https://kube-master:31557
+
+#######################################################################################################################################
+
+## METHOD 2
+## Deploy Dashboard - reference: https://github.com/kubernetes/dashboard/wiki/Creating-sample-user
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+# kubectl get pod -n kube-system | grep dashboard
+
 # nohup kubectl proxy >/dev/null 2>&1 &
 
 # NOT WORKING:
@@ -29,19 +33,17 @@ kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | gre
 # echo -e "[Unit]
 # Description=Description for sample script goes here
 # After=network.target
-#
+
 # [Service]
 # Type=simple
 # ExecStart=/tmp/kubectl-proxy.sh
 # TimeoutStartSec=0
-# 
+
 # [Install]
 # WantedBy=default.target" > /etc/systemd/system/kubectl-proxy.service
 # systemctl daemon-reload
 # systemctl enable kubectl-proxy
 # systemctl start kubectl-proxy
-
-
 
 ## You have to do 3 manual steps:
 # on your local machine, run command ssh -L 8001:localhost:8001 <your_user>@127.0.0.1 -p <vagrant_assigned_port>
