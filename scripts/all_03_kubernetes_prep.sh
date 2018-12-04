@@ -23,7 +23,7 @@ yum install -y yum-utils device-mapper-persistent-data lvm2
 
 mkdir /var/lib/docker
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-yum install -y --setopt=obsoletes=0 docker-ce-17.03.1.ce-1.el7.centos docker-ce-selinux-17.03.1.ce-1.el7.centos
+yum install -y --setopt=obsoletes=0 docker-ce-$DOCKER_TOOLS_VERSION docker-ce-selinux-$DOCKER_TOOLS_VERSION
 usermod -aG docker $KUBERNETES_USER_USERNAME
 usermod -aG docker vagrant
 
@@ -48,7 +48,7 @@ sysctl -p
 # go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
 
 # Install kubernetes
-yum install -y kubelet-1.10.0 kubeadm-1.10.0 kubectl-1.10.0
+yum install -y kubelet-$KUBERNETES_TOOLS_VERSION kubeadm-$KUBERNETES_TOOLS_VERSION kubectl-$KUBERNETES_TOOLS_VERSION
 
 
 

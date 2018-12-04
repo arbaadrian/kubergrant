@@ -5,27 +5,30 @@
 ### variables.sh
 
 You have to create a file named 'variables.sh' in the repository root folder.
-You have to set 3 parameters with your own data.
+You have to set the 3 parameters below with your own data (ssh keys and username):
 
 ```bash
-KUBERNETES_USER_PUBLIC_KEY=""
+KUBERNETES_USER_PUBLIC_KEY=''
 KUBERNETES_USER_USERNAME=""
 KUBERNETES_USER_GROUP=""
 ```
 
-The file will look like this in the end:
+The entire file should look (or, at least contain all the variables) like this:
+(mind the single quotes for KUBERNETES_USER_PUBLIC_KEY)
 
 ```bash
 #!/bin/bash
 
 # ENV Variables
-
 KUBERNETES_USER_PUBLIC_KEY=''
 KUBERNETES_USER_USERNAME=""
 KUBERNETES_USER_GROUP=""
 
 KUBERNETES_MASTER_IP="10.0.21.40"
 KUBERNETES_MASTER_PORT="6443"
+
+KUBERNETES_TOOLS_VERSION="1.12.3"
+DOCKER_TOOLS_VERSION="18.09.0.ce-1.el7.centos"
 
 # Add values here after the master has been provisioned and the values are available
 KUBERNETES_CLUSTER_TOKEN=""
@@ -38,8 +41,11 @@ export KUBERNETES_USER_USERNAME=$KUBERNETES_USER_USERNAME
 export KUBERNETES_USER_GROUP=$KUBERNETES_USER_GROUP
 export KUBERNETES_MASTER_IP=$KUBERNETES_MASTER_IP
 export KUBERNETES_MASTER_PORT=$KUBERNETES_MASTER_PORT
+export KUBERNETES_TOOLS_VERSION=$KUBERNETES_TOOLS_VERSION
+export DOCKER_TOOLS_VERSION=$DOCKER_TOOLS_VERSION
 export KUBERNETES_CLUSTER_TOKEN=$KUBERNETES_CLUSTER_TOKEN
-export KUBERNETES_CLUSTER_TOKEN_SHA=$KUBERNETES_CLUSTER_TOKEN_SHA" > /tmp/vars
+export KUBERNETES_CLUSTER_TOKEN_SHA=$KUBERNETES_CLUSTER_TOKEN_SHA
+export KUBERNETES_DASHBOARD_ADMIN_USER_TOKEN=$KUBERNETES_DASHBOARD_ADMIN_USER_TOKEN" > /tmp/vars
 ```
 
 This file is under .gitignore, so you only have to set this once, it will not be commited to the repo.
@@ -72,11 +78,12 @@ vagrant up kube-master
 
 Wait until the provisioning finishes and copy the admin cluster token and sha sum values from the Vagrant output.
 
-Update your variables.sh file on these 2 parameters - they will be used to provision the nodes.
+Update your variables.sh file on these variables - they will be used to provision the nodes.
 
 ```bash
 KUBERNETES_CLUSTER_TOKEN=""
 KUBERNETES_CLUSTER_TOKEN_SHA=""
+KUBERNETES_DASHBOARD_ADMIN_USER_TOKEN=""
 ```
 
 Provision the rest of the Vagrant nodes
@@ -104,7 +111,7 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 
 ```bash
 # SSh to your cluster master machine
-ssh <user>@127.0.0.1 -p <vagrant_port>
+ssh <user>@master
 
 # Run these commands
 sudo su

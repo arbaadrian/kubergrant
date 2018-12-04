@@ -49,3 +49,10 @@ https://kube-master:31557
 # on your local machine, run command ssh -L 8001:localhost:8001 <your_user>@127.0.0.1 -p <vagrant_assigned_port>
 # navigate with browser to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
 # choose Token authentication and insert token from above commands
+
+#######################################################################################################################################
+
+## Other stuff
+
+# Label your worker node (from the master)
+# kubectl label node <nodename> node-role.kubernetes.io/<role>=<role>
