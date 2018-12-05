@@ -10,6 +10,7 @@ systemctl start docker kubelet
 
 # Change the kuberetes cgroup-driver to 'cgroupfs'.
 sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_MASTER_IP\""'@g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 # Reload the systemd system and restart the kubelet service.
 systemctl daemon-reload
@@ -35,3 +36,16 @@ ln -s /etc/kubernetes/admin.conf /root/.kube/config
 
 # Deploy the flannel network to the kubernetes cluster
 kubectl apply -f /tmp/kube-flannel.yml
+
+# Install helm and tiller
+cd /tmp
+wget https://storage.googleapis.com/kubernetes-helm/helm-v$KUBERNETES_HELM_VERSION-linux-amd64.tar.gz
+tar -zxvf helm-v$KUBERNETES_HELM_VERSION-linux-amd64.tar.gz
+cp linux-amd64/helm /usr/bin/
+cp linux-amd64/tiller /usr/bin/
+cp linux-amd64/helm /usr/local/bin/
+cp linux-amd64/tiller /usr/local/bin/
+helm init
+kubectl create serviceaccount --namespace kube-system tiller
+kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'

@@ -2,6 +2,12 @@
 
 ## Prerequisites
 
+For Vagrant, you have to install the following plugins:
+
+```bash
+vagrant plugin install vagrant-disksize
+```
+
 ### variables.sh
 
 You have to create a file named 'variables.sh' in the repository root folder.

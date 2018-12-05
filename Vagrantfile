@@ -12,12 +12,16 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "master" do |master|
     c = x.fetch('master')
+    master.disksize.size = "40GB"
     master.vm.box = x.fetch('box_image')
     master.vm.hostname = "master"
     # master.vm.network :private_network, ip: x.fetch('ip').fetch('master'), virtualbox__intnet: x.fetch('domain')
     master.vm.network :private_network, ip: x.fetch('ip').fetch('master')
     # master.vm.network :public_network, bridge: "en0: Wi-Fi (AirPort)", auto_config: true
+    ## 31557 is the port for Dashboard
     master.vm.network :forwarded_port, guest: 31557, host: 31557
+    ## 31558 is the port for Kibana
+    master.vm.network :forwarded_port, guest: 5601, host: 31558
     master.vm.provider :virtualbox do |vb|
       # vb.name = "master"+"."+x.fetch('domain')
       vb.name = "master"
@@ -40,10 +44,21 @@ Vagrant.configure("2") do |config|
     master.vm.provision "file", source: "files/kube-flannel.yml", destination: "/tmp/kube-flannel.yml"
     master.vm.provision "shell", path: "scripts/master_01_kubernetes_cluster.sh"
     master.vm.provision "shell", path: "scripts/all_04_cleanup.sh"
+    # Files below will be used to set up Dashboard together with the instructions in zero_others_kubernetes_stuff.sh
     master.vm.provision "file", source: "files/kubernetes-dashboard.yml", destination: "/tmp/kubernetes-dashboard.yml"
     master.vm.provision "file", source: "files/dashboard-adminuser.yml", destination: "/tmp/dashboard-adminuser.yml"
     master.vm.provision "file", source: "files/dashboard-adminuser-rbac.yml", destination: "/tmp/dashboard-adminuser-rbac.yml"
-    master.vm.provision "file", source: "scripts/others_kubernetes_deploy_dashboard.sh", destination: "/tmp/others_kubernetes_deploy_dashboard.sh"
+    # Files below will be used to set up ELK together with the instructions in zero_others_kubernetes_stuff.sh
+    master.vm.provision "file", source: "files/persistent-volume-elk-01.yml", destination: "/tmp/persistent-volume-elk-01.yml"
+    master.vm.provision "file", source: "files/persistent-volume-elk-02.yml", destination: "/tmp/persistent-volume-elk-02.yml"
+    master.vm.provision "file", source: "files/elk_01_k8s_global.tar.gz", destination: "/tmp/elk_01_k8s_global.tar.gz"
+    master.vm.provision "file", source: "files/elk_02_elasticsearch.tar.gz", destination: "/tmp/elk_02_elasticsearch.tar.gz"
+    master.vm.provision "file", source: "files/elk_03_kibana.tar.gz", destination: "/tmp/elk_03_kibana.tar.gz"
+    master.vm.provision "file", source: "files/elk_04_beats_init.tar.gz", destination: "/tmp/elk_04_beats_init.tar.gz"
+    master.vm.provision "file", source: "files/elk_05_beats_agents.tar.gz", destination: "/tmp/elk_05_beats_agents.tar.gz"
+    # zero_others_kubernetes_stuff.sh
+    master.vm.provision "file", source: "scripts/zero_others_kubernetes_stuff.sh", destination: "/tmp/zero_others_kubernetes_stuff.sh"
+
   end
 
   node_ip = IPAddr.new(x.fetch('ip').fetch('node'))
