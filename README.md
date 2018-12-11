@@ -104,7 +104,27 @@ A master and two nodes will be created.
 
 ## Other
 
-1 To change the flannel configuration, you can
+1 To add a sync folder to Vagrant in order to test scripts
+
+```bash
+# edit the Vagrantfile, add a line similar to this
+  machine.vm.synced_folder "app/", "/tmp/app"
+# on guest:
+vagrant plugin install vagrant-vbguest
+vagrant ssh
+# on host
+sudo yum upgrade -y
+sudo reboot
+# on guest, after host rebooted
+vagrant vbguest --do install --no-cleanup
+  # there should be no error and you will see a service being started at the end
+vagrant reload
+  # to add the shared folder to the host
+vagrant ssh
+  # should now have two way folder and files sync between client and host
+```
+
+2 To change the flannel configuration, you can
 
 ```bash
 kubectl edit cm -n kube-system kube-flannel-cfg
@@ -113,7 +133,7 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 # kubectl delete pod -n kube-system -l app=flannel
 ```
 
-2 To install the Dashboard
+3 To install the Dashboard
 
 ```bash
 # SSh to your cluster master machine

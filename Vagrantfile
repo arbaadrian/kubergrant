@@ -58,6 +58,8 @@ Vagrant.configure("2") do |config|
     master.vm.provision "file", source: "files/elk_05_beats_agents.tar.gz", destination: "/tmp/elk_05_beats_agents.tar.gz"
     # zero_others_kubernetes_stuff.sh
     master.vm.provision "file", source: "scripts/zero_others_kubernetes_stuff.sh", destination: "/tmp/zero_others_kubernetes_stuff.sh"
+    # master.vm.synced_folder "files/", "/tmp/files"
+    # master.vm.synced_folder "scripts/", "/tmp/scripts"
 
   end
 
@@ -92,6 +94,8 @@ Vagrant.configure("2") do |config|
       worker.vm.provision :unix_reboot
       worker.vm.provision "shell", path: "scripts/worker_01_kubernetes_cluster_add.sh"
       worker.vm.provision "shell", path: "scripts/all_04_cleanup.sh"
+      # worker.vm.synced_folder "files/", "/tmp/files"
+      # worker.vm.synced_folder "scripts/", "/tmp/scripts"
     end
   end
 end
