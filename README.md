@@ -104,49 +104,71 @@ A master and two nodes will be created.
 
 ## Other
 
-1 To add a sync folder to Vagrant in order to test scripts
+1. To add a sync folder to Vagrant in order to test scripts directly while editing with your favorite IDE:
 
-```bash
-# edit the Vagrantfile, add a line similar to this
-  machine.vm.synced_folder "app/", "/tmp/app"
-# on guest:
-vagrant plugin install vagrant-vbguest
-vagrant ssh
-# on host
-sudo yum upgrade -y
-sudo reboot
-# on guest, after host rebooted
-vagrant vbguest --do install --no-cleanup
-  # there should be no error and you will see a service being started at the end
-vagrant reload
-  # to add the shared folder to the host
-vagrant ssh
-  # should now have two way folder and files sync between client and host
-```
+   ```bash
+   # edit the Vagrantfile, add a line similar to this
+     machine.vm.synced_folder "app/", "/tmp/app"
+   # on guest:
+   vagrant plugin install vagrant-vbguest
+   vagrant ssh
+   # on host
+   sudo yum upgrade -y
+   sudo reboot
+   # on guest, after host rebooted
+   vagrant vbguest --do install --no-cleanup
+     # there should be no error and you will see a service being started at the end
+   vagrant reload
+     # to add the shared folder to the host
+   vagrant ssh
+     # should now have two way folder and files sync between client and host
+   ```
 
-2 To change the flannel configuration, you can
+2. To change the flannel configuration, you can
 
-```bash
-kubectl edit cm -n kube-system kube-flannel-cfg
+   ```bash
+   kubectl edit cm -n kube-system kube-flannel-cfg
 
-# Possibly alo some cleanup
-# kubectl delete pod -n kube-system -l app=flannel
-```
+   # Possibly also some cleanup
+   # kubectl delete pod -n kube-system -l app=flannel
+   ```
 
-3 To install the Dashboard
+3. To install the Dashboard
 
-```bash
-# SSh to your cluster master machine
-ssh <user>@master
+   ```bash
+   kubectl apply -f /tmp/kubernetes-dashboard.yml
+   kubectl -n kube-system get service kubernetes-dashboard
 
-# Run these commands
-sudo su
-chmod +x /tmp/others_kubernetes_deploy_dashboard.sh
-/tmp/others_kubernetes_deploy_dashboard.sh
+   # Create user for Dashboard admin access
+   kubectl apply -f /tmp/dashboard-adminuser.yml
+   kubectl apply -f /tmp/dashboard-adminuser-rbac.yml
 
-## You also have to do 3 manual steps:
+   # Print access token for said user
+   kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 
-# on your local machine, run command ssh -L 8001:localhost:8001 <your_user>@127.0.0.1 -p <vagrant_assigned_port>
-# navigate with browser to http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
-# choose Token authentication and insert token from above commands
-```
+   # Access below URL with Mozilla and paste in the token (will not work with Chrome) due to SSL
+   https://master:31557
+   ```
+
+4. Install Helm and Tiller (example taken from here: <https://www.mirantis.com/blog/install-kubernetes-apps-helm/>)
+
+   ```bash
+   # long one liner sed command
+   sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_WORKER_IP\""'@g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+   cd /tmp
+   wget https://storage.googleapis.com/kubernetes-helm/helm-v2.11.0-linux-amd64.tar.gz
+   tar -zxvf helm-v2.11.0-linux-amd64.tar.gz
+   cd helm
+   sudo cp helm /usr/bin/
+   sudo cp helm /usr/local/bin/
+   sudo cp tiller /usr/bin/
+   sudo cp tiller /usr/local/bin/
+   helm init
+   helm init --upgrade
+   kubectl create serviceaccount --namespace kube-system tiller
+   kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+   kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+   helm repo update
+   # test deploy:
+   helm install stable/mysql
+   ```
