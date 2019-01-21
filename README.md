@@ -37,7 +37,6 @@ KUBERNETES_MASTER_PORT="6443"
 KUBERNETES_TOOLS_VERSION="1.12.3"
 KUBERNETES_HELM_VERSION="2.11.0"
 DOCKER_TOOLS_VERSION="18.06.0.ce-3.el7"
-#DOCKER_TOOLS_VERSION="18.09.0"
 
 # Add values here after the master has been provisioned and the values are available
 KUBERNETES_CLUSTER_TOKEN=""
