@@ -6,7 +6,9 @@
 
 ## METHOD 1
 kubectl apply -f /tmp/kubernetes-dashboard.yml
-kubectl -n kube-system get service kubernetes-dashboard
+kubectl get service kubernetes-dashboard -n kube-system
+### The following line will add the dashboard to the cluster info
+kubectl label services kubernetes-dashboard kubernetes.io/cluster-service=true -n kube-system
 
 # Manual
 # kubectl -n kube-system edit service kubernetes-dashboard
@@ -87,15 +89,19 @@ http://master:31558
 # kubectl label node <nodename> node-role.kubernetes.io/<role>=<role>
 
 # delete deployment
-# kubectl get pods --all-namespaces                                     # get the namespace
-# kubectl get deployment --namespace <namespace>                        # get deployment name
-# kubectl delete deployment <deployment> --namespace <namespace>        # delete deployment with pods
-# kubectl delete pod <pod> --namespace <nmespace>                       # delete a pod
-# kubectl get statefulsets --all-namespaces                             # show all statefulsets
-# kubectl delete statefulsets <statefulsets> --namespace=<namespace>    # delete a statefulset
-# kubectl get services --all-namespaces                                 # show all services
-# kubectl delete services <s1> <s2> --namespace <namespace>             # delete services
-# kubectl get pv --all-namespaces                                       # show all persistent volumes
-# kubectl get pvc --all-namespaces                                      # show all persistent volume claims
-# kubectl delete pvc <pvc> -n <namespace>                               # delete persistent volume claims
-# kubectl delete namespaces <namespace>                                 # deletes a namespace
+# kubectl get pods --all-namespaces                                                 # get the namespace
+# kubectl get deployment --namespace <namespace>                                    # get deployment name
+# kubectl delete deployment <deployment> --namespace <namespace>                    # delete deployment with pods
+# kubectl delete pod <pod> --namespace <nmespace>                                   # delete a pod
+# kubectl get statefulsets --all-namespaces                                         # show all statefulsets
+# kubectl delete statefulsets <statefulsets> --namespace=<namespace>                # delete a statefulset
+# kubectl get services --all-namespaces                                             # show all services
+# kubectl delete services <s1> <s2> --namespace <namespace>                         # delete services
+# kubectl get pv --all-namespaces                                                   # show all persistent volumes
+# kubectl get pvc --all-namespaces                                                  # show all persistent volume claims
+# kubectl delete pvc <pvc> -n <namespace>                                           # delete persistent volume claims
+# kubectl delete namespaces <namespace>                                             # deletes a namespace
+# kubectl get services kubernetes-dashboard -n kube-system --show-labels -o wide    # show the labels of a particular service
+
+### Print cluster info on screen
+kubectl cluster-info
