@@ -1,5 +1,19 @@
 #!/bin/bash
 
+#############
+## INGRESS ##
+#############
+
+kubectl create namespace ingress
+kubectl create -f /tmp/default-backend-deployment.yaml -n ingress
+kubectl create -f /tmp/default-backend-service.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-config-map.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-roles.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-deployment.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-service.yaml -n ingress
+
+
 ###############
 ## DASHBOARD ##
 ###############
@@ -102,6 +116,30 @@ http://master:31558
 # kubectl delete pvc <pvc> -n <namespace>                                           # delete persistent volume claims
 # kubectl delete namespaces <namespace>                                             # deletes a namespace
 # kubectl get services kubernetes-dashboard -n kube-system --show-labels -o wide    # show the labels of a particular service
+# kubectl get pods -l key=value -o jsonpath={.items[*].spec.containers[*].name} -n <namespace>      # print containers in a pod
+# docker run --rm -v /var/run/docker.sock:/var/run/docker.sock assaflavie/runlike 53e68464f13a      # pulls an image that shows me what's running in my container
+# kubectl exec -it <pod_name> -n <namespace> -- <commands>
+
+## HELM
+# helm install stable/heapster                                                      # install a release
+# helm install --name my-release stable/heapster                                    # install a release and give it a name
+# helm ls --all --short                                                             # show all releases deployed with helm
+# helm delete quoting-swan --purge                                                  # delete a release
+
+#################
+## ROOK & CEPH ##
+#################
+
+cd /tmp
+git clone https://github.com/rook/rook.git
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
+kubectl create -f /tmp/ceph-cluster.yml
+kubectl create -f /tmp/ceph-dashboard-nodeip.yml
+
+# to get the password for the ceph 'admin' user
+echo -e "export CEPH_DASHBOARD=$(kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode && echo)" >> /tmp/vars
+source /tmp/vars
+echo $CEPH_DASHBOARD
 
 ### Print cluster info on screen
 kubectl cluster-info
