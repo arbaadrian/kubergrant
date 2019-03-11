@@ -24,6 +24,8 @@ Vagrant.configure("2") do |config|
     master.vm.network :forwarded_port, guest: 5601, host: 31558
     ## 31559 is the port for Prometheus server if we move it to port 81
     master.vm.network :forwarded_port, guest: 81, host: 31559
+    ## this port might change - 32185 for wordpress
+    master.vm.network :forwarded_port, guest: 32185, host: 32185
     master.vm.provider :virtualbox do |vb|
       # vb.name = "master"+"."+x.fetch('domain')
       vb.name = "master"

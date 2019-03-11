@@ -175,9 +175,85 @@ kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"templat
 helm repo update
   # test deploy:
 helm install stable/mysql
-   ```
+```
 
-### 5. Install ROOK, CEPH, GRAFANA and PROMETHEUS (backup provided in files/rook_ceph_grafanaingress.tar.gz)
+### 5. Install an ingress to server for the applications
+
+```bash
+  ## Start an ingress and add an application
+
+  # install default nginx-ingress deployment
+helm install --name apps-ingresses stable/nginx-ingress --set rbac.create=true
+  # here, we have to expose the port that is opened in vagrant to a port inside kubernetes (example for Dashboard)
+# kubectl edit svc apps-ingresses-nginx-ingress-controller
+# (...)
+# spec
+#   ports:
+#   - name: http-mgmt
+#     nodePort: 31557
+#     port: 18080
+#     protocol: TCP
+#     targetPort: 18080
+# (...)
+
+kubectl edit deployments apps-ingresses-nginx-ingress-controller
+  # here, we have to add the port that the application will live at
+(...)
+spec:
+  template:
+    spec:
+      containers:
+        ports:
+        - containerPort: 18080
+          protocol: TCP
+(...)
+
+  # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://master:31557/nginx_status (or IP)
+cat > /tmp/nginx-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-ingress
+          servicePort: 18080
+        path: /nginx_status
+EOF
+kubectl create -f /tmp/nginx-ingress.yaml
+
+# for apps - none yet
+cat > /tmp/app-ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  name: app-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: appsvc1
+          servicePort: 80
+        path: /app1
+      - backend:
+          serviceName: appsvc2
+          servicePort: 80
+        path: /app2
+EOF
+
+kubectl create -f /tmp/app-ingress.yaml
+```
+
+### 5. Install ROOK and CEPH
 
 ```bash
 cd /tmp
@@ -197,11 +273,28 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
     ceph df
     rados df
   # to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
-yum install xfsprogs
+sudo yum install -y xfsprogs
+kubectl edit service apps-ingresses-nginx-ingress-controller
+  # check to which port is port 80 receiving ingress access - 31096? kubectl get services
+(...)
+spec
+  - name: http
+    nodePort: 31096
+    port: 80
+    protocol: TCP
+    targetPort: http
+(...)
+```
+
+### 6. Install GRAFANA and PROMETHEUS (backup provided in files/rook_ceph_grafanaingress.tar.gz)
+
+```bash
+helm init
+helm repo update
 helm install --name prometheus stable/prometheus
 helm install --name grafana stable/grafana
 
-cat > /tpm/grafana-ingress.yaml <<EOF
+cat > /tmp/grafana-ingress.yaml <<EOF
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -218,16 +311,11 @@ spec:
         path: /
 EOF
 
-kubectl edit service my-release-nginx-ingress-controller
-  # check to which port is port 80 receiving ingress access - 31096?
+kubectl create -f /tmp/grafana-ingress.yaml
+  # add port for prometheus-server in the ingress controller
+kubectl edit service apps-ingresses-nginx-ingress-controller
 (...)
-spec:
-  ports:
-  - name: http
-    nodePort: 31096
-    port: 80
-    protocol: TCP
-    targetPort: http
+spec
   - name: prometheus-server
     nodePort: 31559
     port: 81
@@ -252,7 +340,7 @@ kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-passwor
   # access
 http://master:31096
 
-  # below command will give the IP of the prometheus endpoint that needs to be adde into grafana datasources
+  # below command will give the IP of the prometheus endpoint that needs to be added into grafana datasources
 kubectl describe service prometheus-server | grep -i endpoints
 ```
 
@@ -260,27 +348,29 @@ kubectl describe service prometheus-server | grep -i endpoints
 
 ```bash
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/mysql.yaml
-  # edit wordpress.yaml in the Deployment section, make sure version v1beta1 is set instead of v1
+  # edit wordpress.yaml in the Deployment section, make sure version apps/v1beta1 is set instead of apps/v1
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 
-cat > /tpm/wordpress-ingress.yaml <<EOF
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: wordpress-ingress
-spec:
-  rules:
-  - host: master
-    http:
-      paths:
-      - backend:
-          serviceName: wordpress
-          servicePort: 80
-        path: /wp-admin
-EOF
+# cat > /tmp/wordpress-ingress.yaml <<EOF
+# ---
+# apiVersion: extensions/v1beta1
+# kind: Ingress
+# metadata:
+#   name: wordpress-ingress
+# spec:
+#   rules:
+#   - host: master
+#     http:
+#       paths:
+#       - backend:
+#           serviceName: wordpress
+#           servicePort: 80
+#         path: /wp-admin
+# EOF
 
-kubectl create -f wordpress-ingress.yaml
+# kubectl create -f /tmp/wordpress-ingress.yaml
+
+  # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload master
   # do something on wordpress http://master:31096/wp-admin/upload.php
   # if we delete the mysql pod, it will still come back around with the same content
 kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
