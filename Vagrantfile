@@ -22,6 +22,7 @@ Vagrant.configure("2") do |config|
     master.vm.network :forwarded_port, guest: 31557, host: 31557
     ## 31558 is the port for Kibana
     master.vm.network :forwarded_port, guest: 5601, host: 31558
+    master.vm.network :forwarded_port, guest: 81, host: 31559
     master.vm.provider :virtualbox do |vb|
       # vb.name = "master"+"."+x.fetch('domain')
       vb.name = "master"

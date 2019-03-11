@@ -143,3 +143,162 @@ echo $CEPH_DASHBOARD
 
 ### Print cluster info on screen
 kubectl cluster-info
+
+## Start an ingress and add an application
+helm install --name my-release stable/nginx-ingress --set rbac.create=true        # install default nginx-ingress deployment
+kubectl edit svc my-release-nginx-ingress-controller
+# here, we have to expose the port that is opened in vagrant to a port inside kubernetes
+(...)
+spec
+  ports:
+    - name: http-mgmt
+      nodePort: 31557
+      port: 18080
+      protocol: TCP
+      targetPort: 18080
+(...)
+
+kubectl edit deployments my-release-nginx-ingress-controller
+# here, we have to add the port that the application will live at
+(...)
+spec:
+  template:
+    spec:
+      containers:
+        ports:
+          - containerPort: 18080
+            protocol: TCP
+(...)
+
+# now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://master:31557/nginx_status (or IP)
+cat > nginx-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-ingress
+          servicePort: 18080
+        path: /nginx_status
+EOF
+kubectl create -f app-ingress.yaml
+
+# for apps - none yet
+cat > app-ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  name: app-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: appsvc1
+          servicePort: 80
+        path: /app1
+      - backend:
+          serviceName: appsvc2
+          servicePort: 80
+        path: /app2
+EOF
+
+######################################
+## ROOK, CEPH, GRAFANA & PROMETHEUS ##
+######################################
+
+cd /tmp
+git clone https://github.com/rook/rook.git
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/cluster.yaml
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/storageclass.yaml
+# this is a patch for storageclass
+kubectl patch storageclass rook-ceph-block -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/toolbox.yaml
+# check if toolbox pod is up
+kubectl -n rook-ceph get pod -l "app=rook-ceph-tools"
+# get into toolbox pod and run commands to see the ceph cluster info
+kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
+    ceph status
+    ceph osd status
+    ceph df
+    rados df
+# to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
+yum install xfsprogs
+helm install --name prometheus stable/prometheus
+helm install --name grafana stable/grafana
+
+cat > /tpm/grafana-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: grafana
+          servicePort: 80
+        path: /
+EOF
+
+kubectl edit service my-release-nginx-ingress-controller
+# check to which port is port 80 receiving ingress access - 31096?
+(...)
+spec
+  - name: http
+    nodePort: 31096
+    port: 80
+    protocol: TCP
+    targetPort: http
+(...)
+
+# get admin password for grafana
+kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+
+# access
+http://master:31096
+
+# below command will give the IP of the prometheus endpoint that needs to be adde into grafana datasources
+kubectl describe service prometheus-server | grep -i endpoints
+
+#########################################
+## WORDPRESS & MYSQL (on top of above) ##
+#########################################
+
+kubectl create -f rook/cluster/examples/kubernetes/mysql.yaml
+# edit wordpress.yaml in the Deployment section, make sure version v1beta1 is set instead of v1
+kubectl create -f rook/cluster/examples/kubernetes/wordpress.yaml
+cat > /tpm/wordpress-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: wordpress-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: wordpress
+          servicePort: 80
+        path: /wp-admin
+EOF
+kubectl create -f wordpress-ingress.yaml
+
+# do something on wordpress http://master:31096/wp-admin/upload.php
+# if we delete the mysql pod, it will still come back around with the same content
+kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
