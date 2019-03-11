@@ -25,7 +25,7 @@ The entire file should look (or, at least contain all the variables) like this:
 ```bash
 #!/bin/bash
 
-# ENV Variables
+  # ENV Variables
 KUBERNETES_USER_PUBLIC_KEY=''
 KUBERNETES_USER_USERNAME=""
 KUBERNETES_USER_GROUP=""
@@ -38,12 +38,12 @@ KUBERNETES_TOOLS_VERSION="1.12.3"
 KUBERNETES_HELM_VERSION="2.11.0"
 DOCKER_TOOLS_VERSION="18.06.0.ce-3.el7"
 
-# Add values here after the master has been provisioned and the values are available
+  # Add values here after the master has been provisioned and the values are available
 KUBERNETES_CLUSTER_TOKEN=""
 KUBERNETES_CLUSTER_TOKEN_SHA=""
 KUBERNETES_DASHBOARD_ADMIN_USER_TOKEN=""
 
-# Commands
+  # Commands
 echo -e "export KUBERNETES_USER_PUBLIC_KEY=\"$KUBERNETES_USER_PUBLIC_KEY\"
 export KUBERNETES_USER_USERNAME=$KUBERNETES_USER_USERNAME
 export KUBERNETES_USER_GROUP=$KUBERNETES_USER_GROUP
@@ -111,15 +111,15 @@ A master and X nodes will be created.
 ### 1. To add a sync folder to Vagrant in order to test scripts directly while editing with your favorite IDE
 
 ```bash
-# edit the Vagrantfile, add a line similar to this
-  machine.vm.synced_folder "app/", "/tmp/app"
-# on guest:
+  # edit the Vagrantfile, add a line similar to this
+machine.vm.synced_folder "app/", "/tmp/app"
+  # on guest:
 vagrant plugin install vagrant-vbguest
 vagrant ssh
-# on host
+  # on host
 sudo yum upgrade -y
 sudo reboot
-# on guest, after host rebooted
+  # on guest, after host rebooted
 vagrant vbguest --do install --no-cleanup
   # there should be no error and you will see a service being started at the end
 vagrant reload
@@ -133,8 +133,8 @@ vagrant ssh
 ```bash
 kubectl edit cm -n kube-system kube-flannel-cfg
 
-# Possibly also some cleanup
-# kubectl delete pod -n kube-system -l app=flannel
+  # Possibly also some cleanup
+  # kubectl delete pod -n kube-system -l app=flannel
 ```
 
 ### 3. To install the Dashboard
@@ -143,21 +143,21 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 kubectl apply -f /tmp/kubernetes-dashboard.yml
 kubectl -n kube-system get service kubernetes-dashboard
 
-# Create user for Dashboard admin access
+  # Create user for Dashboard admin access
 kubectl apply -f /tmp/dashboard-adminuser.yml
 kubectl apply -f /tmp/dashboard-adminuser-rbac.yml
 
-# Print access token for said user
+  # Print access token for said user
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 
-# Access below URL with Mozilla and paste in the token (will not work with Chrome) due to SSL
+  # Access below URL with Mozilla and paste in the token (will not work with Chrome) due to SSL
 https://master:31557
 ```
 
 ### 4. Install Helm and Tiller (example taken from here: <https://www.mirantis.com/blog/install-kubernetes-apps-helm/>)
 
 ```bash
-# long one liner sed command
+  # long one liner sed command
 sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_WORKER_IP\""'@g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 cd /tmp
 wget https://storage.googleapis.com/kubernetes-helm/helm-v2.11.0-linux-amd64.tar.gz
@@ -173,7 +173,7 @@ kubectl create serviceaccount --namespace kube-system tiller
 kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
 kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
 helm repo update
-# test deploy:
+  # test deploy:
 helm install stable/mysql
    ```
 
@@ -185,18 +185,18 @@ git clone https://github.com/rook/rook.git
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/cluster.yaml
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/storageclass.yaml
-# this is a patch for storageclass
+  # this is a patch for storageclass
 kubectl patch storageclass rook-ceph-block -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/toolbox.yaml
-# check if toolbox pod is up
+  # check if toolbox pod is up
 kubectl -n rook-ceph get pod -l "app=rook-ceph-tools"
-# get into toolbox pod and run commands to see the ceph cluster info
+  # get into toolbox pod and run commands to see the ceph cluster info
 kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
     ceph status
     ceph osd status
     ceph df
     rados df
-# to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
+  # to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
 yum install xfsprogs
 helm install --name prometheus stable/prometheus
 helm install --name grafana stable/grafana
@@ -219,7 +219,7 @@ spec:
 EOF
 
 kubectl edit service my-release-nginx-ingress-controller
-# check to which port is port 80 receiving ingress access - 31096?
+  # check to which port is port 80 receiving ingress access - 31096?
 (...)
 spec:
   ports:
@@ -236,7 +236,7 @@ spec:
 (...)
 
 kubectl edit service prometheus-server
-# change prometheus-server service to listen on port 81
+  # change prometheus-server service to listen on port 81
 (...)
 spec:
   ports:
@@ -246,13 +246,13 @@ spec:
     targetPort: 9090
 (...)
 
-# get admin password for grafana
+  # get admin password for grafana
 kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 
-# access
+  # access
 http://master:31096
 
-# below command will give the IP of the prometheus endpoint that needs to be adde into grafana datasources
+  # below command will give the IP of the prometheus endpoint that needs to be adde into grafana datasources
 kubectl describe service prometheus-server | grep -i endpoints
 ```
 
@@ -260,7 +260,7 @@ kubectl describe service prometheus-server | grep -i endpoints
 
 ```bash
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/mysql.yaml
-# edit wordpress.yaml in the Deployment section, make sure version v1beta1 is set instead of v1
+  # edit wordpress.yaml in the Deployment section, make sure version v1beta1 is set instead of v1
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 
 cat > /tpm/wordpress-ingress.yaml <<EOF
@@ -281,7 +281,7 @@ spec:
 EOF
 
 kubectl create -f wordpress-ingress.yaml
-# do something on wordpress http://master:31096/wp-admin/upload.php
-# if we delete the mysql pod, it will still come back around with the same content
+  # do something on wordpress http://master:31096/wp-admin/upload.php
+  # if we delete the mysql pod, it will still come back around with the same content
 kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
 ```

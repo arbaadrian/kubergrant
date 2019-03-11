@@ -59,8 +59,8 @@ Vagrant.configure("2") do |config|
     master.vm.provision "file", source: "files/elk_04_beats_init.tar.gz", destination: "/tmp/elk_04_beats_init.tar.gz"
     master.vm.provision "file", source: "files/elk_05_beats_agents.tar.gz", destination: "/tmp/elk_05_beats_agents.tar.gz"
     # Files below will be used to set up Ceph
-    master.vm.provision "file", source: "files/ceph-cluster.yml", destination: "/tmp/ceph-cluster.yml"
-    master.vm.provision "file", source: "files/ceph-dashboard-nodeip.yml", destination: "/tmp/ceph-dashboard-nodeip.yml"
+    master.vm.provision "file", source: "files/rook_ceph_grafanaingress.tar.gz", destination: "/tmp/rook_ceph_grafanaingress.tar.gz"
+    master.vm.provision "file", source: "files/wordpress.tar.gz", destination: "/tmp/wordpress.tar.gz"
     # zero_others_kubernetes_stuff.sh
     master.vm.provision "file", source: "scripts/zero_others_kubernetes_stuff.sh", destination: "/tmp/zero_others_kubernetes_stuff.sh"
     # master.vm.synced_folder "files/", "/tmp/files"
