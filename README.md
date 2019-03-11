@@ -34,9 +34,9 @@ KUBERNETES_MASTER_IP="10.0.21.40"
 KUBERNETES_WORKER_IP="$(ip -4 addr show eth1 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')"
 KUBERNETES_MASTER_PORT="6443"
 
-KUBERNETES_TOOLS_VERSION="1.12.3"
-KUBERNETES_HELM_VERSION="2.11.0"
-DOCKER_TOOLS_VERSION="18.06.0.ce-3.el7"
+KUBERNETES_TOOLS_VERSION="1.13.2"
+KUBERNETES_HELM_VERSION="2.12.3"
+DOCKER_TOOLS_VERSION="18.09.1-3.el7"
 
   # Add values here after the master has been provisioned and the values are available
 KUBERNETES_CLUSTER_TOKEN=""
