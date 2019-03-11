@@ -1,12 +1,28 @@
 #!/bin/bash
 
+#############
+## INGRESS ##
+#############
+
+kubectl create namespace ingress
+kubectl create -f /tmp/default-backend-deployment.yaml -n ingress
+kubectl create -f /tmp/default-backend-service.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-config-map.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-roles.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-deployment.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress.yaml -n ingress
+kubectl create -f /tmp/nginx-ingress-controller-service.yaml -n ingress
+
+
 ###############
 ## DASHBOARD ##
 ###############
 
 ## METHOD 1
 kubectl apply -f /tmp/kubernetes-dashboard.yml
-kubectl -n kube-system get service kubernetes-dashboard
+kubectl get service kubernetes-dashboard -n kube-system
+### The following line will add the dashboard to the cluster info
+kubectl label services kubernetes-dashboard kubernetes.io/cluster-service=true -n kube-system
 
 # Manual
 # kubectl -n kube-system edit service kubernetes-dashboard
@@ -87,15 +103,218 @@ http://master:31558
 # kubectl label node <nodename> node-role.kubernetes.io/<role>=<role>
 
 # delete deployment
-# kubectl get pods --all-namespaces                                     # get the namespace
-# kubectl get deployment --namespace <namespace>                        # get deployment name
-# kubectl delete deployment <deployment> --namespace <namespace>        # delete deployment with pods
-# kubectl delete pod <pod> --namespace <nmespace>                       # delete a pod
-# kubectl get statefulsets --all-namespaces                             # show all statefulsets
-# kubectl delete statefulsets <statefulsets> --namespace=<namespace>    # delete a statefulset
-# kubectl get services --all-namespaces                                 # show all services
-# kubectl delete services <s1> <s2> --namespace <namespace>             # delete services
-# kubectl get pv --all-namespaces                                       # show all persistent volumes
-# kubectl get pvc --all-namespaces                                      # show all persistent volume claims
-# kubectl delete pvc <pvc> -n <namespace>                               # delete persistent volume claims
-# kubectl delete namespaces <namespace>                                 # deletes a namespace
+# kubectl get pods --all-namespaces                                                 # get the namespace
+# kubectl get deployment --namespace <namespace>                                    # get deployment name
+# kubectl delete deployment <deployment> --namespace <namespace>                    # delete deployment with pods
+# kubectl delete pod <pod> --namespace <nmespace>                                   # delete a pod
+# kubectl get statefulsets --all-namespaces                                         # show all statefulsets
+# kubectl delete statefulsets <statefulsets> --namespace=<namespace>                # delete a statefulset
+# kubectl get services --all-namespaces                                             # show all services
+# kubectl delete services <s1> <s2> --namespace <namespace>                         # delete services
+# kubectl get pv --all-namespaces                                                   # show all persistent volumes
+# kubectl get pvc --all-namespaces                                                  # show all persistent volume claims
+# kubectl delete pvc <pvc> -n <namespace>                                           # delete persistent volume claims
+# kubectl delete namespaces <namespace>                                             # deletes a namespace
+# kubectl get services kubernetes-dashboard -n kube-system --show-labels -o wide    # show the labels of a particular service
+# kubectl get pods -l key=value -o jsonpath={.items[*].spec.containers[*].name} -n <namespace>      # print containers in a pod
+# docker run --rm -v /var/run/docker.sock:/var/run/docker.sock assaflavie/runlike 53e68464f13a      # pulls an image that shows me what's running in my container
+# kubectl exec -it <pod_name> -n <namespace> -- <commands>
+
+## HELM
+# helm install stable/heapster                                                      # install a release
+# helm install --name my-release stable/heapster                                    # install a release and give it a name
+# helm ls --all --short                                                             # show all releases deployed with helm
+# helm delete quoting-swan --purge                                                  # delete a release
+
+#################
+## ROOK & CEPH ##
+#################
+
+cd /tmp
+git clone https://github.com/rook/rook.git
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
+kubectl create -f /tmp/ceph-cluster.yml
+kubectl create -f /tmp/ceph-dashboard-nodeip.yml
+
+# to get the password for the ceph 'admin' user
+echo -e "export CEPH_DASHBOARD=$(kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode && echo)" >> /tmp/vars
+source /tmp/vars
+echo $CEPH_DASHBOARD
+
+### Print cluster info on screen
+kubectl cluster-info
+
+## Start an ingress and add an application
+helm install --name my-release stable/nginx-ingress --set rbac.create=true        # install default nginx-ingress deployment
+kubectl edit svc my-release-nginx-ingress-controller
+# here, we have to expose the port that is opened in vagrant to a port inside kubernetes
+(...)
+spec
+  ports:
+    - name: http-mgmt
+      nodePort: 31557
+      port: 18080
+      protocol: TCP
+      targetPort: 18080
+(...)
+
+kubectl edit deployments my-release-nginx-ingress-controller
+# here, we have to add the port that the application will live at
+(...)
+spec:
+  template:
+    spec:
+      containers:
+        ports:
+          - containerPort: 18080
+            protocol: TCP
+(...)
+
+# now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://master:31557/nginx_status (or IP)
+cat > nginx-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-ingress
+          servicePort: 18080
+        path: /nginx_status
+EOF
+kubectl create -f app-ingress.yaml
+
+# for apps - none yet
+cat > app-ingress.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  name: app-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: appsvc1
+          servicePort: 80
+        path: /app1
+      - backend:
+          serviceName: appsvc2
+          servicePort: 80
+        path: /app2
+EOF
+
+######################################
+## ROOK, CEPH, GRAFANA & PROMETHEUS ##
+######################################
+
+cd /tmp
+git clone https://github.com/rook/rook.git
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/cluster.yaml
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/storageclass.yaml
+# this is a patch for storageclass
+kubectl patch storageclass rook-ceph-block -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/toolbox.yaml
+# check if toolbox pod is up
+kubectl -n rook-ceph get pod -l "app=rook-ceph-tools"
+# get into toolbox pod and run commands to see the ceph cluster info
+kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
+    ceph status
+    ceph osd status
+    ceph df
+    rados df
+# to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
+yum install xfsprogs
+helm install --name prometheus stable/prometheus
+helm install --name grafana stable/grafana
+
+cat > /tpm/grafana-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: grafana
+          servicePort: 80
+        path: /
+EOF
+
+kubectl edit service my-release-nginx-ingress-controller
+# check to which port is port 80 receiving ingress access - 31096?
+(...)
+spec
+  - name: http
+    nodePort: 31096
+    port: 80
+    protocol: TCP
+    targetPort: http
+  - name: prometheus-server
+    nodePort: 31559
+    port: 81
+    protocol: TCP
+    targetPort: http
+(...)
+
+kubectl edit service prometheus-server
+# change prometheus-server service to listen on port 81
+(...)
+spec:
+  ports:
+  - name: http
+    port: 81
+    protocol: TCP
+    targetPort: 9090
+(...)
+
+# get admin password for grafana
+kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+
+# access
+http://master:31096
+
+# below command will give the IP of the prometheus endpoint that needs to be added into grafana datasources
+kubectl describe service prometheus-server | grep -i endpoints
+
+#########################################
+## WORDPRESS & MYSQL (on top of above) ##
+#########################################
+
+kubectl create -f rook/cluster/examples/kubernetes/mysql.yaml
+# edit wordpress.yaml in the Deployment section, make sure version v1beta1 is set instead of v1
+kubectl create -f rook/cluster/examples/kubernetes/wordpress.yaml
+cat > /tpm/wordpress-ingress.yaml <<EOF
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: wordpress-ingress
+spec:
+  rules:
+  - host: master
+    http:
+      paths:
+      - backend:
+          serviceName: wordpress
+          servicePort: 80
+        path: /wp-admin
+EOF
+kubectl create -f wordpress-ingress.yaml
+
+# do something on wordpress http://master:31096/wp-admin/upload.php
+# if we delete the mysql pod, it will still come back around with the same content
+kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')

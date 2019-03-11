@@ -151,6 +151,7 @@ kind: Service
 apiVersion: v1
 metadata:
   labels:
+    # kubernetes.io/cluster-service: "true"
     k8s-app: kubernetes-dashboard
   name: kubernetes-dashboard
   namespace: kube-system
