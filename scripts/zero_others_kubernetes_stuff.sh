@@ -263,6 +263,22 @@ spec
     port: 80
     protocol: TCP
     targetPort: http
+  - name: prometheus-server
+    nodePort: 31559
+    port: 81
+    protocol: TCP
+    targetPort: http
+(...)
+
+kubectl edit service prometheus-server
+# change prometheus-server service to listen on port 81
+(...)
+spec:
+  ports:
+  - name: http
+    port: 81
+    protocol: TCP
+    targetPort: 9090
 (...)
 
 # get admin password for grafana
@@ -271,7 +287,7 @@ kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-passwor
 # access
 http://master:31096
 
-# below command will give the IP of the prometheus endpoint that needs to be adde into grafana datasources
+# below command will give the IP of the prometheus endpoint that needs to be added into grafana datasources
 kubectl describe service prometheus-server | grep -i endpoints
 
 #########################################

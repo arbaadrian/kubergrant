@@ -177,7 +177,7 @@ helm repo update
 helm install stable/mysql
    ```
 
-### 5. Install ROOK, CEPH, GRAFANA and PROMETHEUS
+### 5. Install ROOK, CEPH, GRAFANA and PROMETHEUS (backup provided in files/rook_ceph_grafanaingress.tar.gz)
 
 ```bash
 cd /tmp
@@ -221,12 +221,29 @@ EOF
 kubectl edit service my-release-nginx-ingress-controller
 # check to which port is port 80 receiving ingress access - 31096?
 (...)
-spec
+spec:
+  ports:
   - name: http
     nodePort: 31096
     port: 80
     protocol: TCP
     targetPort: http
+  - name: prometheus-server
+    nodePort: 31559
+    port: 81
+    protocol: TCP
+    targetPort: http
+(...)
+
+kubectl edit service prometheus-server
+# change prometheus-server service to listen on port 81
+(...)
+spec:
+  ports:
+  - name: http
+    port: 81
+    protocol: TCP
+    targetPort: 9090
 (...)
 
 # get admin password for grafana
@@ -239,12 +256,12 @@ http://master:31096
 kubectl describe service prometheus-server | grep -i endpoints
 ```
 
-### 6. Install Wordpress, MySQL, ingress rules and storage class on top of step 5
+### 6. Install Wordpress, MySQL, ingress rules and storage class on top of step 5 (backup provided in files/wordpress.tar.gz)
 
 ```bash
-kubectl create -f rook/cluster/examples/kubernetes/mysql.yaml
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/mysql.yaml
 # edit wordpress.yaml in the Deployment section, make sure version v1beta1 is set instead of v1
-kubectl create -f rook/cluster/examples/kubernetes/wordpress.yaml
+kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 
 cat > /tpm/wordpress-ingress.yaml <<EOF
 ---
