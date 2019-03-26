@@ -6,6 +6,7 @@ For Vagrant, you have to install the following plugins:
 
 ```bash
 vagrant plugin install vagrant-disksize
+vagrant plugin install vagrant-vbguest
 ```
 
 ### variables.sh
@@ -114,7 +115,6 @@ A master and X nodes will be created.
   # edit the Vagrantfile, add a line similar to this
 machine.vm.synced_folder "app/", "/tmp/app"
   # on guest:
-vagrant plugin install vagrant-vbguest
 vagrant ssh
   # on host
 sudo yum upgrade -y
@@ -140,12 +140,12 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 ### 3. To install the Dashboard
 
 ```bash
-kubectl apply -f /tmp/kubernetes-dashboard.yml
-kubectl -n kube-system get service kubernetes-dashboard
+kubectl create -f /tmp/kubernetes-dashboard.yml
+kubectl get service kubernetes-dashboard -n kube-system
 
   # Create user for Dashboard admin access
-kubectl apply -f /tmp/dashboard-adminuser.yml
-kubectl apply -f /tmp/dashboard-adminuser-rbac.yml
+kubectl create -f /tmp/dashboard-adminuser.yml
+kubectl create -f /tmp/dashboard-adminuser-rbac.yml
 
   # Print access token for said user
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
@@ -208,6 +208,17 @@ spec:
           protocol: TCP
 (...)
 
+kubectl edit service apps-ingresses-nginx-ingress-controller
+  # check to which port is port 80 receiving ingress access - 31096? kubectl get services
+(...)
+spec
+  - name: http
+    nodePort: 31096
+    port: 80
+    protocol: TCP
+    targetPort: http
+(...)
+
   # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://master:31557/nginx_status (or IP)
 cat > /tmp/nginx-ingress.yaml <<EOF
 ---
@@ -225,6 +236,7 @@ spec:
           servicePort: 18080
         path: /nginx_status
 EOF
+
 kubectl create -f /tmp/nginx-ingress.yaml
 
 # for apps - none yet
@@ -253,11 +265,10 @@ EOF
 kubectl create -f /tmp/app-ingress.yaml
 ```
 
-### 5. Install ROOK and CEPH
+### 6. Install ROOK and CEPH
 
 ```bash
-cd /tmp
-git clone https://github.com/rook/rook.git
+cd /tmp && git clone https://github.com/rook/rook.git
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/cluster.yaml
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/storageclass.yaml
@@ -274,19 +285,9 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
     rados df
   # to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
 sudo yum install -y xfsprogs
-kubectl edit service apps-ingresses-nginx-ingress-controller
-  # check to which port is port 80 receiving ingress access - 31096? kubectl get services
-(...)
-spec
-  - name: http
-    nodePort: 31096
-    port: 80
-    protocol: TCP
-    targetPort: http
-(...)
 ```
 
-### 6. Install GRAFANA and PROMETHEUS (backup provided in files/rook_ceph_grafanaingress.tar.gz)
+### 7. Install GRAFANA and PROMETHEUS (backup provided in files/rook_ceph_grafanaingress.tar.gz)
 
 ```bash
 helm init
@@ -344,7 +345,7 @@ http://master:31096
 kubectl describe service prometheus-server | grep -i endpoints
 ```
 
-### 6. Install Wordpress, MySQL, ingress rules and storage class on top of step 5 (backup provided in files/wordpress.tar.gz)
+### 8. Install Wordpress, MySQL, ingress rules and storage class on top of step 5 (backup provided in files/wordpress.tar.gz)
 
 ```bash
 kubectl create -f /tmp/rook/cluster/examples/kubernetes/mysql.yaml
@@ -374,4 +375,30 @@ kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
   # do something on wordpress http://master:31096/wp-admin/upload.php
   # if we delete the mysql pod, it will still come back around with the same content
 kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
+```
+
+## Upgrade cluster
+
+```bash
+  >>> on master
+sudo yum update kubeadm kubelet -y
+sudo kubeadm upgrade plan
+sudo kubeadm upgrade apply v1.14.0
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+kubectl drain worker01 --ignore-daemonsets --delete-local-data
+  ## if stuck aboce at a pod you can - kubectl delete pod < pod_name > -n < namespace > --grace-period=0 --force
+  >>> go to worker01
+sudo yum update kubeadm kubelet -y
+sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+sudo systemctl restart kubelet
+sudo systemctl daemon-reload
+sudo yum update kubectl -y
+  >>> go to master
+kubectl uncordon worker01
+  >>> repeat for all workers
+  >>> go to master after all nodes done
+sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
+sudo systemctl restart kubelet
+sudo systemctl daemon-reload
+sudo yum update kubectl -y
 ```
