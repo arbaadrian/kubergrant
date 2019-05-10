@@ -4,6 +4,32 @@
 NODENAME=$(hostname -s)
 source /tmp/vars
 
+# Install nfs server on master (for playing with volumes)
+yum install -y nfs-server
+
+# Enable and start the nfs server service
+systemctl enable nfs-server
+systemctl start nfs-server
+
+# Configure the nfs share
+cat > /etc/exports << EOF
+$NFS_MOUNT_PATH   *(rw,sync,no_subtree_check,insecure)
+EOF
+
+# Create the required nfs folders
+mkdir -p $NFS_MOUNT_PATH
+mkdir $NFS_MOUNT_PATH/{pva,pvb,pvc,pvd,pve,pvf}
+
+# Set correct nfs permissions
+cd $NFS_MOUNT_PATH && chmod -R 777 ../
+
+# Export the folders
+exportfs -rav
+
+# Check the nfs folders
+exportfs -v
+showmount -e
+
 # Start the docker and kubelet services.
 systemctl enable docker kubelet
 systemctl start docker kubelet

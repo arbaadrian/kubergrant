@@ -3,6 +3,9 @@
 # Load variables
 source /tmp/vars
 
+# Mount the nfs shares
+mount -t nfs $KUBERNETES_MASTER_IP:$NFS_MOUNT_PATH /mnt
+
 # Start the services, docker and kubelet.
 systemctl enable docker kubelet
 systemctl start docker kubelet
