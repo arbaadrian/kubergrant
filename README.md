@@ -35,9 +35,15 @@ KUBERNETES_MASTER_IP="10.0.21.40"
 KUBERNETES_WORKER_IP="$(ip -4 addr show eth1 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')"
 KUBERNETES_MASTER_PORT="6443"
 
+<<<<<<< HEAD
 KUBERNETES_TOOLS_VERSION="1.14.0"
 KUBERNETES_HELM_VERSION="2.13.1"
 DOCKER_TOOLS_VERSION="18.09.3-3.el7"
+=======
+KUBERNETES_TOOLS_VERSION="1.19.2"
+KUBERNETES_HELM_VERSION="2.12.3"
+DOCKER_TOOLS_VERSION="18.09.1-3.el7"
+>>>>>>> f927c41 (Updating K8S resources to newer K8S api)
 
   # Add values here after the master has been provisioned and the values are available
 KUBERNETES_CLUSTER_TOKEN=""
@@ -299,9 +305,9 @@ helm repo update
 helm install --name prometheus stable/prometheus
 helm install --name grafana stable/grafana
 
-cat > /tmp/grafana-ingress.yaml <<EOF
+cat > /tmp/rook_ceph_grafanaingress/grafana-ingress.yaml <<EOF
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: grafana-ingress
@@ -316,7 +322,7 @@ spec:
         path: /
 EOF
 
-kubectl create -f /tmp/grafana-ingress.yaml
+kubectl create -f /tmp/rook_ceph_grafanaingress/grafana-ingress.yaml
   # add port for prometheus-server in the ingress controller
 kubectl edit service apps-ingresses-nginx-ingress-controller
 (...)
@@ -358,7 +364,7 @@ kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 
 # cat > /tmp/wordpress-ingress.yaml <<EOF
 # ---
-# apiVersion: extensions/v1beta1
+# apiVersion: networking.k8s.io/v1
 # kind: Ingress
 # metadata:
 #   name: wordpress-ingress

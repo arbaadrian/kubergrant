@@ -12,18 +12,23 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "master" do |master|
     c = x.fetch('master')
-    master.disksize.size = "40GB"
+    master.disksize.size = c.fetch('disk_size')
     master.vm.box = x.fetch('box_image')
     master.vm.hostname = "master"
+
     # master.vm.network :private_network, ip: x.fetch('ip').fetch('master'), virtualbox__intnet: x.fetch('domain')
     master.vm.network :private_network, ip: x.fetch('ip').fetch('master')
+
     # master.vm.network :public_network, bridge: "en0: Wi-Fi (AirPort)", auto_config: true
+
     ## 31557 is the port for Dashboard
     master.vm.network :forwarded_port, guest: x.fetch('ports').fetch('dashboard_port'), host: x.fetch('ports').fetch('dashboard_port')
     ## 31558 is the port for Kibana
     master.vm.network :forwarded_port, guest: 5601, host: 31558
+
     ## 31559 is the port for Prometheus server if we move it to port 81
     master.vm.network :forwarded_port, guest: 81, host: 31559
+
     ## this port might change - 32185 for wordpress
     master.vm.network :forwarded_port, guest: x.fetch('ports').fetch('wordpress_port'), host: x.fetch('ports').fetch('wordpress_port')
     master.vm.provider :virtualbox do |vb|

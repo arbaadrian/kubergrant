@@ -173,7 +173,7 @@ spec:
   # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://master:31557/nginx_status (or IP)
 cat > /tmp/nginx-ingress.yaml <<EOF
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: nginx-ingress
@@ -191,7 +191,7 @@ kubectl create -f /tmp/nginx-ingress.yaml
 
   # for apps - none yet
 cat > /tmp/app-ingress.yaml <<EOF
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -258,7 +258,7 @@ helm install --name grafana stable/grafana
 
 cat > /tmp/grafana-ingress.yaml <<EOF
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: grafana-ingress
@@ -315,7 +315,7 @@ kubectl create -f rook/cluster/examples/kubernetes/wordpress.yaml
 
 # cat > /tmp/wordpress-ingress.yaml <<EOF
 # ---
-# apiVersion: extensions/v1beta1
+# apiVersion: networking.k8s.io/v1
 # kind: Ingress
 # metadata:
 #   name: wordpress-ingress
