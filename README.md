@@ -89,7 +89,7 @@ node:
   memory: 4096
 ip:
   controlplane: 10.0.21.40
-  node:   10.0.21.41
+  node_ip_range_from: 10.0.21.41
 ports:
   wordpress_port: 30164
   dashboard_port: 31557
@@ -153,7 +153,7 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 # kubectl delete pod -n kube-system -l app=flannel
 ```
 
-### 3. To install the Dashboard
+### 3. Install the Dashboard
 
 NOTE: The dashboard implementation is old and may be unsecure - don't use it for anything other than testing
 
@@ -189,108 +189,7 @@ helm repo update
 helm install stable/mysql
 ```
 
-### 5. Install an ingress to server for the applications
-
-```bash
-#### Ingresses allow access from outside of the cluster to the cluster services
-#### In order to use ingress resources, we first need to install in Ingress Controller
-
-helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --set rbac.create=true
-
-## we may need to edit the Ingress controller validator and add access to all api groups
-# check this in case ingresses throw errors: https://github.com/kubernetes/ingress-nginx/issues/5401#issuecomment-908091233
-kubectl edit ValidatingWebhookConfiguration ingress-nginx-admission
-
-## here, we have to expose the port that is opened in vagrant to a port inside kubernetes (example for Dashboard)
-
-# kubectl edit svc apps-ingresses-nginx-ingress-controller
-# (...)
-# spec
-#   ports:
-#   - name: http-mgmt
-#     nodePort: 31557
-#     port: 18080
-#     protocol: TCP
-#     targetPort: 18080
-# (...)
-
-# kubectl edit deployments apps-ingresses-nginx-ingress-controller
-## here, we have to add the port that the application will live at
-# (...)
-# spec:
-#   template:
-#     spec:
-#       containers:
-#         ports:
-#         - containerPort: 18080
-#           protocol: TCP
-# (...)
-
-# kubectl edit service apps-ingresses-nginx-ingress-controller
-# # check to which port is port 80 receiving ingress access - 31096? kubectl get services
-# (...)
-# spec
-#   - name: http
-#     nodePort: 31096
-#     port: 80
-#     protocol: TCP
-#     targetPort: http
-# (...)
-
-## now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://controlplane:31557/nginx_status (or IP)
-cat > /vagrant/files/dashboard/nginx-ingress.yaml <<EOF
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: nginx-ingress
-spec:
-  rules:
-  - host: controlplane
-    http:
-      paths:
-      - path: /nginx_status
-        pathType: Prefix
-        backend:
-          service:
-            name: nginx-ingress
-            port:
-              number: 18080
-EOF
-
-# for apps - none yet
-cat > /vagrant/files/dashboard/app-ingress.yaml <<EOF
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-  name: app-ingress
-spec:
-  rules:
-  - host: controlplane
-    http:
-      paths:
-      - path: /app1
-        pathType: Prefix
-        backend:
-          serviceName: appsvc1
-          servicePort: 80
-      - path: /app2
-        pathType: Prefix
-        backend:
-          service
-            name: appsvc2
-            port:
-              number: 80
-EOF
-
-# deploy the ingresses
-kubectl create -f /vagrant/files/dashboard/nginx-ingress.yaml
-kubectl create -f /vagrant/files/dashboard/app-ingress.yaml
-```
-
-### 6. Install ROOK and CEPH
+### 5. Install ROOK and CEPH (optional)
 
 ```bash
   # this storage type only makes sense to be deployed if you have at least 3 worker nodes configured in the cluster
@@ -312,138 +211,6 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
     rados df
   # to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
 sudo yum install -y xfsprogs
-```
-
-### 7. Install GRAFANA and PROMETHEUS
-
-```bash
-  # add required Helm repositories
-helm repo add stable https://charts.helm.sh/stable
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-
-helm install stable prometheus-community/kube-prometheus-stack
-
-mkdir /tmp/grafana-prometheus
-cat > /tmp/grafana-prometheus/grafana-ingress.yaml <<EOF
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: grafana-ingress
-spec:
-  rules:
-  - host: controlplane
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: grafana
-            port:
-              number80
-        
-EOF
-
-kubectl create -f /tmp/grafana-prometheus/grafana-ingress.yaml
-  # add port for prometheus-server in the ingress controller
-kubectl edit service apps-ingresses-nginx-ingress-controller
-(...)
-spec
-  - name: prometheus-server
-    nodePort: 31559
-    port: 81
-    protocol: TCP
-    targetPort: http
-(...)
-
-kubectl edit service prometheus-server
-  # change prometheus-server service to listen on port 81
-(...)
-spec:
-  ports:
-  - name: http
-    port: 81
-    protocol: TCP
-    targetPort: 9090
-(...)
-
-  # get admin password for grafana
-kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
-
-  # access
-http://controlplane:31096
-
-  # below command will give the IP of the prometheus endpoint that needs to be added into grafana datasources
-kubectl describe service prometheus-server | grep -i endpoints
-```
-
-### 8. Install Wordpress, MySQL, ingress rules and storage class on top of step 5 (backup provided in files/wordpress.tar.gz)
-
-```bash
-# prerequisites - deploy rook-ceph-block StorageClass
-
-kubectl create -f /vagrant/files/wordpress/mysql.yaml
-kubectl create -f /vagrant/files/wordpress/wordpress.yaml
-
-# cat > /tmp/wordpress-ingress.yaml <<EOF
-# ---
-# apiVersion: networking.k8s.io/v1
-# kind: Ingress
-# metadata:
-#   name: wordpress-ingress
-# spec:
-#   rules:
-#   - host: controlplane
-#     http:
-#       paths:
-#       - path: /wp-admin
-#         pathType: Prefix
-#         backend:
-#           service:
-#             name: wordpress
-#             port:
-#               number: 80
-# EOF
-
-kubectl create -f /vagrant/files/wordpress/wordpress-ingress.yaml
-
-  # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload controlplane
-  # do something on wordpress http://controlplane:31096/wp-admin/upload.php
-
-  # if we delete the mysql pod, it will still come back around with the same content
-kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
-```
-
-## Upgrade cluster
-
-```bash
-#### on controlplane
-sudo yum update kubeadm kubelet -y
-sudo kubeadm upgrade plan
-sudo kubeadm upgrade apply v1.14.0
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-kubectl drain worker01 --ignore-daemonsets --delete-local-data
-  ## if draining above gets stuck on a pod you can:
-  ## kubectl delete pod <pod_name> -n <namespace> --grace-period=0 --force
-
-#### on workers
-sudo yum update kubeadm kubelet -y
-sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
-sudo systemctl restart kubelet
-sudo systemctl daemon-reload
-sudo yum update kubectl -y
-
-#### on controlplane
-kubectl uncordon worker{x}
-
-#### repeat for all workers
-
-#### go to controlplane after all nodes done
-sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
-sudo systemctl restart kubelet
-sudo systemctl daemon-reload
-sudo yum update kubectl -y
 ```
 
 ## Upgrade Helm
