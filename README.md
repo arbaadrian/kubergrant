@@ -2,10 +2,16 @@
 
 ## Prerequisites
 
+This entire deployment has been tested with and requires be installed: 
+
+- vagrant >= 2.2.18
+- virtualbox = 6.1.26
+
 For Vagrant, you have to install the following plugins:
 
 ```bash
 vagrant plugin install vagrant-disksize
+# the vbgues plugin will not correctly work on MacOS, hence comented
 # vagrant plugin install vagrant-vbguest
 ```
 
@@ -69,20 +75,24 @@ This file is under .gitignore, so you only have to set this once, it will not be
 
 In the file 'env.yaml' you can change or set up machine info or add other parameters which will be referenced in the Vagrant file.
 
-```bash
+```yaml
 ---
-
 box_image: centos/7
+domain: kubernetes
 controlplane:
-  cpus: 1
+  cpus: 2
   memory: 2048
+  disk_size: "40GB"
 node:
-  count: 2
-  cpus: 1
-  memory: 2048
+  count: 1
+  cpus: 2
+  memory: 4096
 ip:
   controlplane: 10.0.21.40
   node:   10.0.21.41
+ports:
+  wordpress_port: 30164
+  dashboard_port: 31557
 ```
 
 ## Usage
@@ -115,6 +125,8 @@ A controlplane and X nodes will be created.
 
 ### 1. To add a sync folder to Vagrant in order to test scripts directly while editing with your favorite IDE
 
+This is currently not supported on MacOS since the VirtualBox guest additions plugin is not working
+
 ```bash
   # edit the Vagrantfile, add a line similar to this
 machine.vm.synced_folder "app/", "/tmp/app"
@@ -138,18 +150,21 @@ vagrant ssh
 kubectl edit cm -n kube-system kube-flannel-cfg
 
   # Possibly also some cleanup
-  # kubectl delete pod -n kube-system -l app=flannel
+# kubectl delete pod -n kube-system -l app=flannel
 ```
 
 ### 3. To install the Dashboard
 
+NOTE: The dashboard implementation is old and may be unsecure - don't use it for anything other than testing
+
 ```bash
-kubectl create -f /tmp/kubernetes-dashboard.yml
+  # deploy the Dashboard and cehck the service port
+kubectl create -f /vagrant/files/dashboard/kubernetes-dashboard.yml
 kubectl get service kubernetes-dashboard -n kube-system
 
   # Create user for Dashboard admin access
-kubectl create -f /tmp/dashboard-adminuser.yml
-kubectl create -f /tmp/dashboard-adminuser-rbac.yml
+kubectl create -f /vagrant/files/dashboard/dashboard-adminuser.yml
+kubectl create -f /vagrant/files/dashboard/dashboard-adminuser-rbac.yml
 
   # Print access token for said user
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
@@ -177,11 +192,17 @@ helm install stable/mysql
 ### 5. Install an ingress to server for the applications
 
 ```bash
-  ## Start an ingress and add an application
+#### Ingresses allow access from outside of the cluster to the cluster services
+#### In order to use ingress resources, we first need to install in Ingress Controller
 
-  # install default nginx-ingress deployment
-helm install --name apps-ingresses stable/nginx-ingress --set rbac.create=true
-  # here, we have to expose the port that is opened in vagrant to a port inside kubernetes (example for Dashboard)
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --set rbac.create=true
+
+## we may need to edit the Ingress controller validator and add access to all api groups
+# check this in case ingresses throw errors: https://github.com/kubernetes/ingress-nginx/issues/5401#issuecomment-908091233
+kubectl edit ValidatingWebhookConfiguration ingress-nginx-admission
+
+## here, we have to expose the port that is opened in vagrant to a port inside kubernetes (example for Dashboard)
+
 # kubectl edit svc apps-ingresses-nginx-ingress-controller
 # (...)
 # spec
@@ -193,33 +214,33 @@ helm install --name apps-ingresses stable/nginx-ingress --set rbac.create=true
 #     targetPort: 18080
 # (...)
 
-kubectl edit deployments apps-ingresses-nginx-ingress-controller
-  # here, we have to add the port that the application will live at
-(...)
-spec:
-  template:
-    spec:
-      containers:
-        ports:
-        - containerPort: 18080
-          protocol: TCP
-(...)
+# kubectl edit deployments apps-ingresses-nginx-ingress-controller
+## here, we have to add the port that the application will live at
+# (...)
+# spec:
+#   template:
+#     spec:
+#       containers:
+#         ports:
+#         - containerPort: 18080
+#           protocol: TCP
+# (...)
 
-kubectl edit service apps-ingresses-nginx-ingress-controller
-  # check to which port is port 80 receiving ingress access - 31096? kubectl get services
-(...)
-spec
-  - name: http
-    nodePort: 31096
-    port: 80
-    protocol: TCP
-    targetPort: http
-(...)
+# kubectl edit service apps-ingresses-nginx-ingress-controller
+# # check to which port is port 80 receiving ingress access - 31096? kubectl get services
+# (...)
+# spec
+#   - name: http
+#     nodePort: 31096
+#     port: 80
+#     protocol: TCP
+#     targetPort: http
+# (...)
 
-  # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://controlplane:31557/nginx_status (or IP)
-cat > /tmp/nginx-ingress.yaml <<EOF
+## now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://controlplane:31557/nginx_status (or IP)
+cat > /vagrant/files/dashboard/nginx-ingress.yaml <<EOF
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: nginx-ingress
@@ -228,17 +249,18 @@ spec:
   - host: controlplane
     http:
       paths:
-      - backend:
-          serviceName: nginx-ingress
-          servicePort: 18080
-        path: /nginx_status
+      - path: /nginx_status
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-ingress
+            port:
+              number: 18080
 EOF
 
-kubectl create -f /tmp/nginx-ingress.yaml
-
 # for apps - none yet
-cat > /tmp/app-ingress.yaml <<EOF
-apiVersion: extensions/v1beta1
+cat > /vagrant/files/dashboard/app-ingress.yaml <<EOF
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -249,29 +271,37 @@ spec:
   - host: controlplane
     http:
       paths:
-      - backend:
+      - path: /app1
+        pathType: Prefix
+        backend:
           serviceName: appsvc1
           servicePort: 80
-        path: /app1
-      - backend:
-          serviceName: appsvc2
-          servicePort: 80
-        path: /app2
+      - path: /app2
+        pathType: Prefix
+        backend:
+          service
+            name: appsvc2
+            port:
+              number: 80
 EOF
 
-kubectl create -f /tmp/app-ingress.yaml
+# deploy the ingresses
+kubectl create -f /vagrant/files/dashboard/nginx-ingress.yaml
+kubectl create -f /vagrant/files/dashboard/app-ingress.yaml
 ```
 
 ### 6. Install ROOK and CEPH
 
 ```bash
+  # this storage type only makes sense to be deployed if you have at least 3 worker nodes configured in the cluster
+  # it may not work correctly if you only have one or two
 cd /tmp && git clone https://github.com/rook/rook.git
-kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/operator.yaml
-kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/cluster.yaml
-kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/storageclass.yaml
+cd rook/cluster/examples/kubernetes/ceph
+kubectl create namespace rook-ceph
+kubectl create -f crds.yaml -f common.yaml -f operator.yaml -f toolbox.yaml
+kubectl create -f cluster.yaml
   # this is a patch for storageclass
 kubectl patch storageclass rook-ceph-block -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-kubectl create -f /tmp/rook/cluster/examples/kubernetes/ceph/toolbox.yaml
   # check if toolbox pod is up
 kubectl -n rook-ceph get pod -l "app=rook-ceph-tools"
   # get into toolbox pod and run commands to see the ceph cluster info
@@ -284,15 +314,17 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
 sudo yum install -y xfsprogs
 ```
 
-### 7. Install GRAFANA and PROMETHEUS (backup provided in files/rook_ceph_grafanaingress.tar.gz)
+### 7. Install GRAFANA and PROMETHEUS
 
 ```bash
-helm init
-helm repo update
-helm install --name prometheus stable/prometheus
-helm install --name grafana stable/grafana
+  # add required Helm repositories
+helm repo add stable https://charts.helm.sh/stable
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
-cat > /tmp/rook_ceph_grafanaingress/grafana-ingress.yaml <<EOF
+helm install stable prometheus-community/kube-prometheus-stack
+
+mkdir /tmp/grafana-prometheus
+cat > /tmp/grafana-prometheus/grafana-ingress.yaml <<EOF
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -303,13 +335,17 @@ spec:
   - host: controlplane
     http:
       paths:
-      - backend:
-          serviceName: grafana
-          servicePort: 80
-        path: /
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number80
+        
 EOF
 
-kubectl create -f /tmp/rook_ceph_grafanaingress/grafana-ingress.yaml
+kubectl create -f /tmp/grafana-prometheus/grafana-ingress.yaml
   # add port for prometheus-server in the ingress controller
 kubectl edit service apps-ingresses-nginx-ingress-controller
 (...)
@@ -345,9 +381,10 @@ kubectl describe service prometheus-server | grep -i endpoints
 ### 8. Install Wordpress, MySQL, ingress rules and storage class on top of step 5 (backup provided in files/wordpress.tar.gz)
 
 ```bash
-kubectl create -f /tmp/rook/cluster/examples/kubernetes/mysql.yaml
-  # edit wordpress.yaml in the Deployment section, make sure version apps/v1beta1 is set instead of apps/v1
-kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
+# prerequisites - deploy rook-ceph-block StorageClass
+
+kubectl create -f /vagrant/files/wordpress/mysql.yaml
+kubectl create -f /vagrant/files/wordpress/wordpress.yaml
 
 # cat > /tmp/wordpress-ingress.yaml <<EOF
 # ---
@@ -360,16 +397,20 @@ kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 #   - host: controlplane
 #     http:
 #       paths:
-#       - backend:
-#           serviceName: wordpress
-#           servicePort: 80
-#         path: /wp-admin
+#       - path: /wp-admin
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: wordpress
+#             port:
+#               number: 80
 # EOF
 
-# kubectl create -f /tmp/wordpress-ingress.yaml
+kubectl create -f /vagrant/files/wordpress/wordpress-ingress.yaml
 
   # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload controlplane
   # do something on wordpress http://controlplane:31096/wp-admin/upload.php
+
   # if we delete the mysql pod, it will still come back around with the same content
 kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
 ```
@@ -377,23 +418,28 @@ kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.
 ## Upgrade cluster
 
 ```bash
-  >>> on controlplane
+#### on controlplane
 sudo yum update kubeadm kubelet -y
 sudo kubeadm upgrade plan
 sudo kubeadm upgrade apply v1.14.0
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 kubectl drain worker01 --ignore-daemonsets --delete-local-data
-  ## if stuck aboce at a pod you can - kubectl delete pod < pod_name > -n < namespace > --grace-period=0 --force
-  >>> go to worker01
+  ## if draining above gets stuck on a pod you can:
+  ## kubectl delete pod <pod_name> -n <namespace> --grace-period=0 --force
+
+#### on workers
 sudo yum update kubeadm kubelet -y
 sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 sudo systemctl restart kubelet
 sudo systemctl daemon-reload
 sudo yum update kubectl -y
-  >>> go to controlplane
-kubectl uncordon worker01
-  >>> repeat for all workers
-  >>> go to controlplane after all nodes done
+
+#### on controlplane
+kubectl uncordon worker{x}
+
+#### repeat for all workers
+
+#### go to controlplane after all nodes done
 sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 sudo systemctl restart kubelet
 sudo systemctl daemon-reload
@@ -403,6 +449,5 @@ sudo yum update kubectl -y
 ## Upgrade Helm
 
 ```bash
-curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | bash
-helm init --upgrade
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ```

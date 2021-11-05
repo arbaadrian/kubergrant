@@ -1,0 +1,105 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: stilton
+  namespace: cheese
+  labels:
+    app: cheese
+    cheese: stilton
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cheese
+      task: stilton
+  template:
+    metadata:
+      namespace: cheese
+      labels:
+        app: cheese
+        task: stilton
+        version: v0.0.1
+    spec:
+      containers:
+      - name: cheese
+        image: errm/cheese:stilton
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
+        ports:
+        - containerPort: 80
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: cheddar
+  namespace: cheese
+  labels:
+    app: cheese
+    cheese: cheddar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cheese
+      task: cheddar
+  template:
+    metadata:
+      namespace: cheese
+      labels:
+        app: cheese
+        task: cheddar
+        version: v0.0.1
+    spec:
+      containers:
+      - name: cheese
+        image: errm/cheese:cheddar
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
+        ports:
+        - containerPort: 80
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: wensleydale
+  namespace: cheese
+  labels:
+    app: cheese
+    cheese: wensleydale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cheese
+      task: wensleydale
+  template:
+    metadata:
+      namespace: cheese
+      labels:
+        app: cheese
+        task: wensleydale
+        version: v0.0.1
+    spec:
+      containers:
+      - name: cheese
+        image: errm/cheese:wensleydale
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
+        ports:
+        - containerPort: 80

@@ -61,7 +61,7 @@ mkdir /root/.kube
 ln -s /etc/kubernetes/admin.conf /root/.kube/config
 
 # Deploy the flannel network to the kubernetes cluster
-kubectl apply -f /tmp/kube-flannel.yml
+kubectl apply -f /vagrant/files/kube-flannel.yml
 
 # Install helm and tiller
 cd /tmp
