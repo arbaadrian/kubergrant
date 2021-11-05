@@ -1,0 +1,40 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cheese
+  namespace: cheese
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: stilton.kubes
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stilton
+            port:
+              number: 80
+  - host: cheddar.kubes
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cheddar
+            port:
+              number: 80
+  - host: wensleydale.kubes
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: wensleydale
+            port:
+              number: 80
