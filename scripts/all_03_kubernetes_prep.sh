@@ -19,7 +19,7 @@ swapoff -a
 sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 #Install Docker CE
-yum install -y yum-utils device-mapper-persistent-data lvm2
+yum install -y device-mapper-persistent-data lvm2
 
 mkdir /var/lib/docker
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
@@ -49,6 +49,3 @@ sysctl -p
 
 # Install kubernetes
 yum install -y kubelet-$KUBERNETES_TOOLS_VERSION kubeadm-$KUBERNETES_TOOLS_VERSION kubectl-$KUBERNETES_TOOLS_VERSION
-
-
-
