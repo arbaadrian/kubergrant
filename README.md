@@ -41,7 +41,7 @@ KUBERNETES_HELM_VERSION="2.13.1"
 DOCKER_TOOLS_VERSION="18.09.3-3.el7"
 =======
 KUBERNETES_TOOLS_VERSION="1.19.2"
-KUBERNETES_HELM_VERSION="2.12.3"
+KUBERNETES_HELM_VERSION="3.7.1"
 DOCKER_TOOLS_VERSION="18.09.1-3.el7"
 >>>>>>> f927c41 (Updating K8S resources to newer K8S api)
 
@@ -164,24 +164,17 @@ kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | gre
 https://master:31557
 ```
 
-### 4. Install Helm and Tiller (example taken from here: <https://www.mirantis.com/blog/install-kubernetes-apps-helm/>)
+### 4. Install Helm (example taken from here: <https://www.mirantis.com/blog/install-kubernetes-apps-helm/>)
 
 ```bash
   # long one liner sed command
-sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_WORKER_IP\""'@g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --cgroup-driver=systemd --node-ip=$KUBERNETES_WORKER_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
 cd /tmp
-wget https://storage.googleapis.com/kubernetes-helm/helm-v2.11.0-linux-amd64.tar.gz
-tar -zxvf helm-v2.11.0-linux-amd64.tar.gz
+wget https://get.helm.sh/helm-v3.7.1-linux-amd64.tar.gz
+tar -zxvf helm-v3.7.1-linux-amd64.tar.gz
 cd helm
 sudo cp helm /usr/bin/
 sudo cp helm /usr/local/bin/
-sudo cp tiller /usr/bin/
-sudo cp tiller /usr/local/bin/
-helm init
-helm init --upgrade
-kubectl create serviceaccount --namespace kube-system tiller
-kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
 helm repo update
   # test deploy:
 helm install stable/mysql
