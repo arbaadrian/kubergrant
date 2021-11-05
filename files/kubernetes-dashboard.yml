@@ -226,9 +226,9 @@ spec:
       serviceAccountName: kubernetes-dashboard
       nodeSelector:
         "kubernetes.io/os": linux
-      # Comment the following tolerations if Dashboard must not be deployed on control_plane
+      # Comment the following tolerations if Dashboard must not be deployed on controlplane
       tolerations:
-        - key: node-role.kubernetes.io/control_plane
+        - key: node-role.kubernetes.io/controlplane
           effect: NoSchedule
 
 ---
@@ -293,9 +293,9 @@ spec:
       serviceAccountName: kubernetes-dashboard
       nodeSelector:
         "kubernetes.io/os": linux
-      # Comment the following tolerations if Dashboard must not be deployed on control_plane
+      # Comment the following tolerations if Dashboard must not be deployed on controlplane
       tolerations:
-        - key: node-role.kubernetes.io/control_plane
+        - key: node-role.kubernetes.io/controlplane
           effect: NoSchedule
       volumes:
         - name: tmp-volume

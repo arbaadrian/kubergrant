@@ -4,12 +4,12 @@
 NODENAME=$(hostname -s)
 source /tmp/vars
 
-# Install nfs server on control_plane (for playing with volumes)
-yum install -y nfs-server
+# Install nfs server on controlplane (for playing with volumes)
+yum install -y nfs-utils
 
 # Enable and start the nfs server service
-systemctl enable nfs-server
-systemctl start nfs-server
+systemctl enable nfs-server rpcbind
+systemctl start nfs-server rpcbind
 
 # Configure the nfs share
 cat > /etc/exports << EOF

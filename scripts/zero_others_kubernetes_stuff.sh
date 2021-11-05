@@ -36,7 +36,7 @@ kubectl apply -f /tmp/dashboard-adminuser-rbac.yml
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 
 # Access below URL with Mozilla and paste in the token (will not work with Chrome)
-https://control_plane:31557
+https://controlplane:31557
 
 
 
@@ -93,13 +93,13 @@ kubectl apply -f elk_05_beats_agents
 git clone https://github.com/kubernetes/kube-state-metrics.git
 kubectl apply -f kube-state-metrics/kubernetes
 
-http://control_plane:31558
+http://controlplane:31558
 
 #################
 ## Other stuff ##
 #################
 
-# Label your worker node (from the control_plane)
+# Label your worker node (from the controlplane)
 # kubectl label node <nodename> node-role.kubernetes.io/<role>=<role>
 
 # delete deployment
@@ -170,7 +170,7 @@ spec:
           protocol: TCP
 (...)
 
-  # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://control_plane:31557/nginx_status (or IP)
+  # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://controlplane:31557/nginx_status (or IP)
 cat > /tmp/nginx-ingress.yaml <<EOF
 ---
 apiVersion: networking.k8s.io/v1
@@ -179,7 +179,7 @@ metadata:
   name: nginx-ingress
 spec:
   rules:
-  - host: control_plane
+  - host: controlplane
     http:
       paths:
       - backend:
@@ -199,7 +199,7 @@ metadata:
   name: app-ingress
 spec:
   rules:
-  - host: control_plane
+  - host: controlplane
     http:
       paths:
       - backend:
@@ -264,7 +264,7 @@ metadata:
   name: grafana-ingress
 spec:
   rules:
-  - host: control_plane
+  - host: controlplane
     http:
       paths:
       - backend:
@@ -300,7 +300,7 @@ spec:
 kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 
   # access
-http://control_plane:31096
+http://controlplane:31096
 
   # below command will give the IP of the prometheus endpoint that needs to be added into grafana datasources
 kubectl describe service prometheus-server | grep -i endpoints
@@ -321,7 +321,7 @@ kubectl create -f rook/cluster/examples/kubernetes/wordpress.yaml
 #   name: wordpress-ingress
 # spec:
 #   rules:
-#   - host: control_plane
+#   - host: controlplane
 #     http:
 #       paths:
 #       - backend:
@@ -332,7 +332,7 @@ kubectl create -f rook/cluster/examples/kubernetes/wordpress.yaml
 
 # kubectl create -f /tmp/wordpress-ingress.yaml
 
-  # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload control_plane
-  # do something on wordpress http://control_plane:31096/wp-admin/upload.php
+  # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload controlplane
+  # do something on wordpress http://controlplane:31096/wp-admin/upload.php
   # if we delete the mysql pod, it will still come back around with the same content
 kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
