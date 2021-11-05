@@ -112,5 +112,6 @@ Vagrant.configure("2") do |config|
   end
 end
 
-# sudo ssh -i /home/aarba/.ssh/id_rsa -L 443:localhost:443 aarba@10.0.21.4
-# sudo ssh -i /home/aarba/.ssh/id_rsa -L 443:localhost:443 aarba@10.107.40.114
+# export MYUSERNAME=
+# sudo ssh -i /home/$MYUSERNAME/.ssh/id_rsa -L 443:localhost:443 $MYUSERNAME@10.0.21.4
+# sudo ssh -i /home/$MYUSERNAME/.ssh/id_rsa -L 443:localhost:443 $MYUSERNAME@10.107.40.114
