@@ -4,7 +4,7 @@
 source /tmp/vars
 
 # Mount the nfs shares
-mount -t nfs $KUBERNETES_MASTER_IP:$NFS_MOUNT_PATH /mnt
+mount -t nfs $KUBERNETES_CONTROL_PLANE_IP:$NFS_MOUNT_PATH /mnt
 
 # Start the services, docker and kubelet.
 systemctl enable docker kubelet
@@ -19,4 +19,4 @@ systemctl daemon-reload
 systemctl restart kubelet
 
 # Kubernetes worker node
-kubeadm join $KUBERNETES_MASTER_IP:$KUBERNETES_MASTER_PORT --token $KUBERNETES_CLUSTER_TOKEN --discovery-token-ca-cert-hash $KUBERNETES_CLUSTER_TOKEN_SHA
+kubeadm join $KUBERNETES_CONTROL_PLANE_IP:$KUBERNETES_CONTROL_PLANE_PORT --token $KUBERNETES_CLUSTER_TOKEN --discovery-token-ca-cert-hash $KUBERNETES_CLUSTER_TOKEN_SHA

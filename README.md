@@ -12,7 +12,7 @@ vagrant plugin install vagrant-vbguest
 ### variables.sh
 
 You have to create a file named 'variables.sh' in the repository root folder.
-You have to set the 3 parameters below with your own data (ssh keys and username):
+You have to set the 3 parameters below with your own data (ssh keys and username/usergroup):
 
 ```bash
 KUBERNETES_USER_PUBLIC_KEY=''
@@ -31,21 +31,15 @@ KUBERNETES_USER_PUBLIC_KEY=''
 KUBERNETES_USER_USERNAME=""
 KUBERNETES_USER_GROUP=""
 
-KUBERNETES_MASTER_IP="10.0.21.40"
+KUBERNETES_CONTROL_PLANE_IP="10.0.21.40"
 KUBERNETES_WORKER_IP="$(ip -4 addr show eth1 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')"
-KUBERNETES_MASTER_PORT="6443"
+KUBERNETES_CONTROL_PLANE_PORT="6443"
 
-<<<<<<< HEAD
-KUBERNETES_TOOLS_VERSION="1.14.0"
-KUBERNETES_HELM_VERSION="2.13.1"
-DOCKER_TOOLS_VERSION="18.09.3-3.el7"
-=======
 KUBERNETES_TOOLS_VERSION="1.19.2"
 KUBERNETES_HELM_VERSION="3.7.1"
 DOCKER_TOOLS_VERSION="18.09.1-3.el7"
->>>>>>> f927c41 (Updating K8S resources to newer K8S api)
 
-  # Add values here after the master has been provisioned and the values are available
+  # Add values here after the control_plane has been provisioned and the values are available
 KUBERNETES_CLUSTER_TOKEN=""
 KUBERNETES_CLUSTER_TOKEN_SHA=""
 KUBERNETES_DASHBOARD_ADMIN_USER_TOKEN=""
@@ -57,9 +51,9 @@ NFS_MOUNT_PATH="/tmp/nfs/kubedata"
 echo -e "export KUBERNETES_USER_PUBLIC_KEY=\"$KUBERNETES_USER_PUBLIC_KEY\"
 export KUBERNETES_USER_USERNAME=$KUBERNETES_USER_USERNAME
 export KUBERNETES_USER_GROUP=$KUBERNETES_USER_GROUP
-export KUBERNETES_MASTER_IP=$KUBERNETES_MASTER_IP
+export KUBERNETES_CONTROL_PLANE_IP=$KUBERNETES_CONTROL_PLANE_IP
 export KUBERNETES_WORKER_IP=$KUBERNETES_WORKER_IP
-export KUBERNETES_MASTER_PORT=$KUBERNETES_MASTER_PORT
+export KUBERNETES_CONTROL_PLANE_PORT=$KUBERNETES_CONTROL_PLANE_PORT
 export KUBERNETES_TOOLS_VERSION=$KUBERNETES_TOOLS_VERSION
 export KUBERNETES_HELM_VERSION=$KUBERNETES_HELM_VERSION
 export DOCKER_TOOLS_VERSION=$DOCKER_TOOLS_VERSION
@@ -79,7 +73,7 @@ In the file 'env.yaml' you can change or set up machine info or add other parame
 ---
 
 box_image: centos/7
-master:
+control_plane:
   cpus: 1
   memory: 2048
 node:
@@ -87,14 +81,14 @@ node:
   cpus: 1
   memory: 2048
 ip:
-  master: 10.0.21.40
+  control_plane: 10.0.21.40
   node:   10.0.21.41
 ```
 
 ## Usage
 
 ```bash
-vagrant up master
+vagrant up control_plane
 ```
 
 Wait until the provisioning finishes and copy the admin cluster token and sha sum values from the Vagrant output.
@@ -115,7 +109,7 @@ vagrant up
 
 ## Result
 
-A master and X nodes will be created.
+A control_plane and X nodes will be created.
 
 ## Other
 
@@ -161,7 +155,7 @@ kubectl create -f /tmp/dashboard-adminuser-rbac.yml
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 
   # Access below URL with Mozilla and paste in the token (will not work with Chrome) due to SSL
-https://master:31557
+https://control_plane:31557
 ```
 
 ### 4. Install Helm (example taken from here: <https://www.mirantis.com/blog/install-kubernetes-apps-helm/>)
@@ -222,7 +216,7 @@ spec
     targetPort: http
 (...)
 
-  # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://master:31557/nginx_status (or IP)
+  # now we will add an ingress for nginx, it will return a few nginx details when accessed like so http://control_plane:31557/nginx_status (or IP)
 cat > /tmp/nginx-ingress.yaml <<EOF
 ---
 apiVersion: extensions/v1beta1
@@ -231,7 +225,7 @@ metadata:
   name: nginx-ingress
 spec:
   rules:
-  - host: master
+  - host: control_plane
     http:
       paths:
       - backend:
@@ -252,7 +246,7 @@ metadata:
   name: app-ingress
 spec:
   rules:
-  - host: master
+  - host: control_plane
     http:
       paths:
       - backend:
@@ -306,7 +300,7 @@ metadata:
   name: grafana-ingress
 spec:
   rules:
-  - host: master
+  - host: control_plane
     http:
       paths:
       - backend:
@@ -342,7 +336,7 @@ spec:
 kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 
   # access
-http://master:31096
+http://control_plane:31096
 
   # below command will give the IP of the prometheus endpoint that needs to be added into grafana datasources
 kubectl describe service prometheus-server | grep -i endpoints
@@ -363,7 +357,7 @@ kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 #   name: wordpress-ingress
 # spec:
 #   rules:
-#   - host: master
+#   - host: control_plane
 #     http:
 #       paths:
 #       - backend:
@@ -374,8 +368,8 @@ kubectl create -f /tmp/rook/cluster/examples/kubernetes/wordpress.yaml
 
 # kubectl create -f /tmp/wordpress-ingress.yaml
 
-  # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload master
-  # do something on wordpress http://master:31096/wp-admin/upload.php
+  # kubectl get services and open up in vagrant the port assigned for wordpress, ie 32185, and do vagrant reload control_plane
+  # do something on wordpress http://control_plane:31096/wp-admin/upload.php
   # if we delete the mysql pod, it will still come back around with the same content
 kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.items[0].metadata.name}')
 ```
@@ -383,7 +377,7 @@ kubectl delete pod $(kubectl get pod -l app=wordpress,tier=mysql -o jsonpath='{.
 ## Upgrade cluster
 
 ```bash
-  >>> on master
+  >>> on control_plane
 sudo yum update kubeadm kubelet -y
 sudo kubeadm upgrade plan
 sudo kubeadm upgrade apply v1.14.0
@@ -396,10 +390,10 @@ sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d 
 sudo systemctl restart kubelet
 sudo systemctl daemon-reload
 sudo yum update kubectl -y
-  >>> go to master
+  >>> go to control_plane
 kubectl uncordon worker01
   >>> repeat for all workers
-  >>> go to master after all nodes done
+  >>> go to control_plane after all nodes done
 sudo kubeadm upgrade node config --kubelet-version $(kubelet --version | cut -d ' ' -f 2)
 sudo systemctl restart kubelet
 sudo systemctl daemon-reload
