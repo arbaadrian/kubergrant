@@ -4,20 +4,46 @@
 NODENAME=$(hostname -s)
 source /tmp/vars
 
+# Install nfs server on control_plane (for playing with volumes)
+yum install -y nfs-server
+
+# Enable and start the nfs server service
+systemctl enable nfs-server
+systemctl start nfs-server
+
+# Configure the nfs share
+cat > /etc/exports << EOF
+$NFS_MOUNT_PATH   *(rw,sync,no_subtree_check,insecure)
+EOF
+
+# Create the required nfs folders
+mkdir -p $NFS_MOUNT_PATH
+mkdir $NFS_MOUNT_PATH/{pva,pvb,pvc,pvd,pve,pvf}
+
+# Set correct nfs permissions
+cd $NFS_MOUNT_PATH && chmod -R 777 ../
+
+# Export the folders
+exportfs -rav
+
+# Check the nfs folders
+exportfs -v
+showmount -e
+
 # Start the docker and kubelet services.
 systemctl enable docker kubelet
 systemctl start docker kubelet
 
 # Change the kuberetes cgroup-driver to 'cgroupfs'.
 #OLD sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_MASTER_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_CONTROL_PLANE_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 # Reload the systemd system and restart the kubelet service.
 systemctl daemon-reload
 systemctl restart kubelet
 
 # Kubernetes Cluster Initialization
-kubeadm init --apiserver-cert-extra-sans=$KUBERNETES_MASTER_IP --node-name $NODENAME --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$KUBERNETES_MASTER_IP
+kubeadm init --apiserver-cert-extra-sans=$KUBERNETES_CONTROL_PLANE_IP --node-name $NODENAME --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$KUBERNETES_CONTROL_PLANE_IP
 
 # Create new '.kube' configuration directory and copy the configuration 'admin.conf'.
 # for our user

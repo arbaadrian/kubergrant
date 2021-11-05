@@ -10,7 +10,7 @@ cd /tmp
 rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 # rpm -ivh https://centos7.iuscommunity.org/ius-release.rpm
 yum install -y wget zip unzip nano tar git
-echo -e "$KUBERNETES_MASTER_IP master
+echo -e "$KUBERNETES_CONTROL_PLANE_IP control_plane
 10.0.21.41 worker01
 10.0.21.42 worker02
 10.0.21.43 worker03" >> /etc/hosts
