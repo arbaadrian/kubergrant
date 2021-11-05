@@ -2,11 +2,16 @@
 
 ## Prerequisites
 
+This entire deployment has been tested with and requires be installed: 
+
+- vagrant >= 2.2.18
+- virtualbox = 6.1.26
+
 For Vagrant, you have to install the following plugins:
 
 ```bash
 vagrant plugin install vagrant-disksize
-# the vbgues plugin will not correctly work on MacOS
+# the vbgues plugin will not correctly work on MacOS, hence comented
 # vagrant plugin install vagrant-vbguest
 ```
 

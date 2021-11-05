@@ -5,17 +5,22 @@
 #############
 
 kubectl create namespace ingress-nginx
-helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --set rbac.create=true
+
+helm repo add nginx-stable https://helm.nginx.com/stable
+helm repo update
+
+helm install ingress-nginx nginx-stable/nginx-ingress --namespace ingress-nginx --set rbac.create=true
 
 # we have to edit he validation webhook config to allow creation of ingresses for all resources otherwise ingress creations will fail
-kubectl get ValidatingWebhookConfiguration ingress-nginx-admission -oyaml > ingress-nginx-admission.yaml
-sed -i 's/networking.k8s.io/\"\"/' ingress-nginx-admission.yaml
-kubectl apply -f ingress-nginx-admission.yaml
+# kubectl get ValidatingWebhookConfiguration ingress-nginx-admission -oyaml > ingress-nginx-admission.yaml
+# sed -i 's/networking.k8s.io/\"\"/' ingress-nginx-admission.yaml
+# kubectl apply -f ingress-nginx-admission.yaml
 
 ###############
 ### CHEESES ###
 ###############
 
+kubectl apply -f /vagrant/files/cheeses/cheeses-namespace.yaml
 kubectl apply -f /vagrant/files/cheeses/
 
 ###############

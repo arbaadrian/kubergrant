@@ -81,8 +81,8 @@ Vagrant.configure("2") do |config|
       worker.vm.provision :unix_reboot
       worker.vm.provision "shell", path: "scripts/worker_01_kubernetes_cluster_add.sh"
       worker.vm.provision "shell", path: "scripts/all_04_cleanup.sh"
-      worker.vm.synced_folder "files/", "/tmp/files"
-      worker.vm.synced_folder "scripts/", "/tmp/scripts"
+      # worker.vm.synced_folder "files/", "/tmp/files"
+      # worker.vm.synced_folder "scripts/", "/tmp/scripts"
     end
   end
 end
