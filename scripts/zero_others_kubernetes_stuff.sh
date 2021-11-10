@@ -23,6 +23,10 @@ helm install ingress-nginx nginx-stable/nginx-ingress --namespace ingress-nginx 
 kubectl apply -f /vagrant/files/cheeses/cheeses-namespace.yaml
 kubectl apply -f /vagrant/files/cheeses/
 
+# export this to your local /etc/hosts file
+10.0.21.40      controlplane
+10.0.21.41      worker01      stilton.kubes  cheddar.kubes   wensleydale.kubes
+
 ###############
 ## DASHBOARD ##
 ###############

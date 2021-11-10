@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: statefulset-config
+  labels:
+    app: statefulset-app
+data:
+  primary.cnf: |
+    # Apply this config only on the primary.
+    I am the writer instance replica
+  replica.cnf: |
+    # Apply this config only on replicas.
+    I am the reader instance replica  

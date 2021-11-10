@@ -23,9 +23,18 @@ yum install -y device-mapper-persistent-data lvm2
 
 mkdir /var/lib/docker
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-yum install -y --setopt=obsoletes=0 docker-ce-$DOCKER_TOOLS_VERSION docker-ce-cli-$DOCKER_TOOLS_VERSION
+yum install -y --setopt=obsoletes=0 docker-ce docker-ce-cli containerd.io
 usermod -aG docker $KUBERNETES_USER_USERNAME
 usermod -aG docker vagrant
+
+# change the cgroups driver to systemd in Docker
+mkdir /etc/docker
+touch /etc/docker/daemon.json
+cat <<EOF > /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"]
+}
+EOF
 
 # Prepare for kubernetes install
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
