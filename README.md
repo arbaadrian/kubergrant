@@ -7,11 +7,17 @@ This entire deployment has been tested with and requires be installed:
 - vagrant >= 2.2.18
 - virtualbox = 6.1.26
 
+```bash
+# MacOS installation
+brew install virtualbox
+brew install vagrant
+```
+
 For Vagrant, you have to install the following plugins:
 
 ```bash
 vagrant plugin install vagrant-disksize
-# the vbgues plugin will not correctly work on MacOS, hence comented
+# the vbgues plugin will not correctly work on MacOS, hence commented
 # vagrant plugin install vagrant-vbguest
 ```
 
@@ -69,7 +75,7 @@ export KUBERNETES_DASHBOARD_ADMIN_USER_TOKEN=$KUBERNETES_DASHBOARD_ADMIN_USER_TO
 export NFS_MOUNT_PATH=$NFS_MOUNT_PATH" > /tmp/vars
 ```
 
-This file is under .gitignore, so you only have to set this once, it will not be commited to the repo.
+This file is under .gitignore, so you only have to set this once, it will not be committed to the repo.
 
 ### env.yaml
 
@@ -84,9 +90,10 @@ controlplane:
   memory: 2048
   disk_size: "40GB"
 node:
+  # how many worker nodes to create
   count: 1
   cpus: 2
-  memory: 4096
+  memory: 2048
 ip:
   controlplane: 10.0.21.40
   node_ip_range_from: 10.0.21.41
@@ -117,9 +124,21 @@ Provision the rest of the Vagrant nodes
 vagrant up
 ```
 
+To stop or destroy the vagrant built infrastructure you have to run one of the commands below
+
+```bash
+# to stop the clusters
+vagrant halt
+
+# to destroy the cluster
+vagrant destroy
+```
+
 ## Result
 
 A controlplane and X nodes will be created.
+
+Files under the files folder will be available under the /vagrant folder within the Vagrant provisioned machines.
 
 ## Other
 
@@ -158,7 +177,7 @@ kubectl edit cm -n kube-system kube-flannel-cfg
 NOTE: The dashboard implementation is old and may be unsecure - don't use it for anything other than testing
 
 ```bash
-  # deploy the Dashboard and cehck the service port
+  # deploy the Dashboard and check the service port
 kubectl create -f /vagrant/files/dashboard/kubernetes-dashboard.yml
 kubectl get service kubernetes-dashboard -n kube-system
 
@@ -211,6 +230,14 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
     rados df
   # to remove toolbox: kubectl -n rook-ceph delete deployment rook-ceph-tools
 sudo yum install -y xfsprogs
+```
+
+### 6. For other components to be installed
+
+You can check the file below
+
+```bash
+scripts/zero_others_kubernetes_stuff.sh
 ```
 
 ## Upgrade Helm

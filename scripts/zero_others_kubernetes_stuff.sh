@@ -20,8 +20,8 @@ helm install ingress-nginx nginx-stable/nginx-ingress --namespace ingress-nginx 
 ### CHEESES ###
 ###############
 
-kubectl apply -f /vagrant/files/cheeses/cheeses-namespace.yaml
-kubectl apply -f /vagrant/files/cheeses/
+kubectl apply -f /vagrant/files/Deployment-and-Ingress-example-cheeses/cheeses-namespace.yaml
+kubectl apply -f /vagrant/files/Deployment-and-Ingress-example-cheeses/
 
 # export this to your local /etc/hosts file
 10.0.21.40      controlplane
