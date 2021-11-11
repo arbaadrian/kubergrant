@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-app
+spec:
+  selector:
+    matchLabels:
+      app: statefulset-app
+  serviceName: statefulset
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: statefulset-app
+    spec:
+      initContainers:
+      - name: init-nginx
+        image: nginx
+        command:
+        - bash
+        - "-c"
+        - |
+          set -ex
+          # Generate mysql server-id from pod ordinal index.
+          [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+          ordinal=${BASH_REMATCH[1]}
+          echo [statefulset] > /tmp/testfile.ini
+          # Add an offset to avoid reserved server-id=0 value.
+          echo server-id=$((100 + $ordinal)) >> /tmp/testfile.ini
+          # Copy appropriate conf.d files from config-map to emptyDir.
+          if [[ $ordinal -eq 0 ]]; then
+            cp /mnt/config-map/primary.cnf /tmp/
+          else
+            cp /mnt/config-map/replica.cnf /tmp/
+          fi          
+        volumeMounts:
+        - name: ini
+          mountPath: /tmp
+        - name: config-map
+          mountPath: /mnt/config-map
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - name: nginx
+          containerPort: 80
+        volumeMounts:
+        - name: ini
+          mountPath: /tmp
+      volumes:
+      - name: ini
+        emptyDir: {}
+      - name: config-map
+        configMap:
+          name: statefulset-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Mi

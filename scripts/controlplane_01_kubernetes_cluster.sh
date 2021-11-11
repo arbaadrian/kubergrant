@@ -72,5 +72,16 @@ cp linux-amd64/helm /usr/local/bin/
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 
+# message to make sure we copy the join command
+cat << EOF
+##########################################################################################
+## Make sure you copy the values found under --token and --discovery-token-ca-cert-hash ##
+## from the below command into your "variables.sh" file under the variables             ##
+## KUBERNETES_CLUSTER_TOKEN and KUBERNETES_CLUSTER_TOKEN_SHA respectively               ##
+##########################################################################################
+
+
+EOF
+
 # print cluster join token
 kubeadm token create --print-join-command
