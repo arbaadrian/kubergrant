@@ -6,7 +6,7 @@ require 'ipaddr'
 require 'yaml'
 
 x = YAML.load_file('env.yaml')
-puts "Config: #{x.inspect}\n\n"
+# puts "Config: #{x.inspect}\n\n"
 
 Vagrant.configure("2") do |config|
 

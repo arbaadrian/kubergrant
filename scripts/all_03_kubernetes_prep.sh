@@ -23,7 +23,7 @@ yum install -y device-mapper-persistent-data lvm2
 
 mkdir /var/lib/docker
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-yum install -y --setopt=obsoletes=0 docker-ce docker-ce-cli containerd.io
+yum install -y --setopt=obsoletes=0 docker-ce docker-ce-cli containerd.io podman
 usermod -aG docker $KUBERNETES_USER_USERNAME
 usermod -aG docker vagrant
 
