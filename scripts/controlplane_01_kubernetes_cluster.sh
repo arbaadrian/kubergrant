@@ -60,8 +60,9 @@ chown -R vagrant.vagrant /home/vagrant/.kube
 mkdir /root/.kube
 ln -s /etc/kubernetes/admin.conf /root/.kube/config
 
-# Deploy the weave network overlay to the kubernetes cluster
-kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+# Deploy the calico network overlay to the kubernetes cluster
+curl https://docs.projectcalico.org/manifests/calico.yaml -O
+kubectl apply -f calico.yaml
 
 # Install helm and tiller
 cd /tmp
