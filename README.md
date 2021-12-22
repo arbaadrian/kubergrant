@@ -13,6 +13,16 @@ brew install virtualbox
 brew install vagrant
 ```
 
+After installing virtualbox, please check if you need to allow anything related to Oracle VirtualBox in *System Prefferences > Security & Privacy*
+
+You may also need to create a file - */etc/vbox/networks.conf* - and update its content to contain the IP and CIDR range of your choice for your VMs, like this:
+
+```bash
+cat /etc/vbox/networks.conf    
+
+* 55.0.0.0/8 192.168.0.0/16
+```
+
 For Vagrant, you have to install the following plugins:
 
 ```bash
