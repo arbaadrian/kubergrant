@@ -12,7 +12,7 @@ systemctl start docker kubelet
 
 #Change the kuberetes cgroup-driver to 'cgroupfs'.
 #OLD sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_WORKER_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --network-plugin=cni --node-ip=$KUBERNETES_WORKER_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 #Reload the systemd system and restart the kubelet service.
 systemctl daemon-reload

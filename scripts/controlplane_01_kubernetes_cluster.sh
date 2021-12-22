@@ -36,7 +36,7 @@ systemctl start docker kubelet
 
 # Change the kuberetes cgroup-driver to 'cgroupfs'.
 #OLD sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=$KUBERNETES_CONTROL_PLANE_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+sed -i 's@Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"@'"Environment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --network-plugin=cni --node-ip=$KUBERNETES_CONTROL_PLANE_IP\""'@g' /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 # Reload the systemd system and restart the kubelet service.
 systemctl daemon-reload
@@ -60,8 +60,8 @@ chown -R vagrant.vagrant /home/vagrant/.kube
 mkdir /root/.kube
 ln -s /etc/kubernetes/admin.conf /root/.kube/config
 
-# Deploy the flannel network to the kubernetes cluster
-kubectl apply -f /vagrant/files/kube-flannel.yml
+# Deploy the weave network overlay to the kubernetes cluster
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
 
 # Install helm and tiller
 cd /tmp
